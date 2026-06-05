@@ -1,0 +1,26 @@
+disabled_rules:
+  - trailing_comma
+  - todo
+
+opt_in_rules:
+  - empty_count
+  - first_where
+  - sorted_imports
+  - redundant_nil_coalescing
+
+excluded:
+  - .build
+  - DerivedData
+  - Boomer.xcodeproj
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_comments: true
+
+identifier_name:
+  min_length: 2
+  excluded:
+    - id
+    - x
+    - y
