@@ -19,7 +19,10 @@ final class PermissionsManager {
 
     /// Prompts for Accessibility, opening System Settings if not yet granted.
     func requestAccessibility() {
-        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+        // The imported C global `kAXTrustedCheckOptionPrompt` is a non-Sendable
+        // mutable global, which Swift 6 strict concurrency rejects. Its documented
+        // value is the string below, so we use that directly.
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(options)
     }
 }

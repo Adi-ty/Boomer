@@ -4,6 +4,15 @@ SCHEME  ?= Boomer
 CONFIG  ?= Debug
 DEST    ?= platform=macOS
 
+# Building a macOS app needs full Xcode, not just the Command Line Tools. If the
+# active developer dir is the CLT, point this build at Xcode.app (no sudo needed).
+# Permanent fix: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+ifeq ($(findstring CommandLineTools,$(shell xcode-select -p 2>/dev/null)),CommandLineTools)
+ifneq ($(wildcard /Applications/Xcode.app/Contents/Developer),)
+export DEVELOPER_DIR := /Applications/Xcode.app/Contents/Developer
+endif
+endif
+
 help:
 	@echo "Boomer — make targets:"
 	@echo "  bootstrap  install xcodegen/swiftlint/swiftformat, then generate"

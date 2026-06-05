@@ -15,10 +15,15 @@ settings:
     DEVELOPMENT_TEAM: "" # set for notarized distribution
     CODE_SIGN_STYLE: Automatic
 
-packages:
-  Rive:
-    url: https://github.com/rive-app/rive-ios
-    from: "6.0.0"
+# Rive (animation runtime) is added in Phase 1, when real pet rendering lands.
+# Until then the pet uses placeholder SF Symbol art so the project builds fully
+# offline with no GitHub/SPM access. To add it back:
+#   packages:
+#     Rive:
+#       url: https://github.com/rive-app/rive-ios
+#       from: "6.0.0"
+# and add the dependency to the Boomer target. Commit Package.resolved and build
+# with -onlyUsePackageVersionsFromResolvedFile to avoid re-fetching/credential prompts.
 
 targets:
   Boomer:
@@ -26,9 +31,6 @@ targets:
     platform: macOS
     sources:
       - path: Sources/Boomer
-    dependencies:
-      - package: Rive
-        product: RiveRuntime
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.boomer.Boomer

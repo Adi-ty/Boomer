@@ -16,7 +16,9 @@ Onboarding lets you pick your companion; the other can be unlocked later.
 ## Requirements
 
 - macOS 26+ (Tahoe), Apple Silicon
-- Xcode 26 / Swift 6.3+
+- Full Xcode 26 / Swift 6.3+ (the Command Line Tools alone can't build a `.app`).
+  The `Makefile` auto-points at `/Applications/Xcode.app` if your active toolchain
+  is the CLT; the permanent fix is `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 - Distributed direct + notarized (intentionally **not** sandboxed)
 
 ## Getting started
