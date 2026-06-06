@@ -53,6 +53,19 @@ Or test it manually:
 open "boomer://event/agent-done?agent=claude-code"
 ```
 
+## opencode integration
+
+Boomer can also celebrate when an [opencode](https://opencode.ai) session finishes.
+Install the plugin (fires on the `session.idle` event):
+
+```bash
+mkdir -p ~/.config/opencode/plugins
+cp scripts/opencode-boomer-plugin.js ~/.config/opencode/plugins/boomer.js
+```
+
+Per-project installs work too: `.opencode/plugins/boomer.js`. Any agent can use
+the same bridge — just open `boomer://event/agent-done?agent=<name>` when done.
+
 ## Project layout
 
 ```

@@ -139,10 +139,15 @@ final class PetEngine {
 
     // MARK: - External input
 
-    /// Entry point for `boomer://` deep links (Stop-hook bridge, etc.).
+    /// Entry point for `boomer://` deep links — the bridge used by coding-agent
+    /// integrations (Claude Code Stop hook, opencode plugin, …).
     func handleDeepLink(_ url: URL) {
         if url.host == "event", url.lastPathComponent == "agent-done" {
-            bus.publish(.codingAgentCompleted(agent: "claude-code"))
+            let agent = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first { $0.name == "agent" }?
+                .value ?? "unknown"
+            bus.publish(.codingAgentCompleted(agent: agent))
         }
     }
 
