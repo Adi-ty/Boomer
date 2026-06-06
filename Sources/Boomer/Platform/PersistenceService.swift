@@ -13,7 +13,19 @@ final class PersistenceService {
 
     init(inMemory: Bool = false) throws {
         let schema = Schema([Note.self, Reminder.self])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+        let configuration: ModelConfiguration
+        if inMemory {
+            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        } else {
+            // Scope the store to our own folder (the SwiftData default is a
+            // shared `Application Support/default.store`) so uninstalling is
+            // a single `rm -rf` and no other app's data is ever touched.
+            let folder = URL(fileURLWithPath: NSHomeDirectory())
+                .appendingPathComponent("Library/Application Support/Boomer", isDirectory: true)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            configuration = ModelConfiguration(schema: schema,
+                                               url: folder.appendingPathComponent("Boomer.store"))
+        }
         container = try ModelContainer(for: schema, configurations: [configuration])
     }
 }
