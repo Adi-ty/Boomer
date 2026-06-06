@@ -2,10 +2,10 @@
     import AppKit
     import SwiftUI
 
-    /// DEBUG-only: render the pet in several states to PNGs, for development review
-    /// without needing Screen Recording permission. Triggered by launching with the
-    /// `BOOMER_SNAPSHOT=<dir>` environment variable; the app writes the images and
-    /// exits. Never runs in normal use.
+    /// DEBUG-only: render the pet (and onboarding) in several states to PNGs,
+    /// for development review without needing Screen Recording permission.
+    /// Triggered by launching with the `BOOMER_SNAPSHOT=<dir>` environment
+    /// variable; the app writes the images and exits. Never runs in normal use.
     @MainActor
     enum PetSnapshot {
         static func runIfRequested() -> Bool {
@@ -13,6 +13,12 @@
             let folder = URL(fileURLWithPath: dir)
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 
+            renderPets(into: folder)
+            renderOnboarding(into: folder)
+            return true
+        }
+
+        private static func renderPets(into folder: URL) {
             let combos: [
                 (name: String, species: PetSpecies, setup: (PetEngine) -> Void, activity: PetMotion.Activity)
             ] =
@@ -33,26 +39,41 @@
                 ]
 
             for combo in combos {
-                let engine = PetEngine(pet: Pet(species: combo.species))
+                let engine = PetEngine.preview(species: combo.species)
                 combo.setup(engine)
                 let motion = PetMotion(engine: engine, size: CGSize(width: 200, height: 220))
-                motion.debugSet(activity: combo.activity)
+                motion.present(activity: combo.activity)
                 let view = ZStack {
                     RoundedRectangle(cornerRadius: 18).fill(Color(white: 0.93))
                     PetView(engine: engine, motion: motion)
                 }
                 .frame(width: 200, height: 220)
-
-                let renderer = ImageRenderer(content: view)
-                renderer.scale = 2
-                guard let image = renderer.nsImage,
-                      let tiff = image.tiffRepresentation,
-                      let rep = NSBitmapImageRep(data: tiff),
-                      let png = rep.representation(using: .png, properties: [:])
-                else { continue }
-                try? png.write(to: folder.appendingPathComponent("\(combo.name).png"))
+                write(view, size: CGSize(width: 200, height: 220), to: folder, name: combo.name)
             }
-            return true
+        }
+
+        private static func renderOnboarding(into folder: URL) {
+            let steps: [(name: String, step: OnboardingView.Step, species: PetSpecies?)] = [
+                ("onboarding-welcome", .welcome, nil),
+                ("onboarding-choose", .choose, .dog),
+                ("onboarding-name", .name, .cat),
+            ]
+            for item in steps {
+                let view = OnboardingView(initialStep: item.step,
+                                          preselected: item.species) { _, _ in }
+                write(view, size: CGSize(width: 560, height: 600), to: folder, name: item.name)
+            }
+        }
+
+        private static func write(_ view: some View, size: CGSize, to folder: URL, name: String) {
+            let renderer = ImageRenderer(content: view.frame(width: size.width, height: size.height))
+            renderer.scale = 2
+            guard let image = renderer.nsImage,
+                  let tiff = image.tiffRepresentation,
+                  let rep = NSBitmapImageRep(data: tiff),
+                  let png = rep.representation(using: .png, properties: [:])
+            else { return }
+            try? png.write(to: folder.appendingPathComponent("\(name).png"))
         }
     }
 #endif

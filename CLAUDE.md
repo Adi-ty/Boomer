@@ -47,8 +47,10 @@ xcodebuild test -scheme Boomer -destination 'platform=macOS' \
   - `DownloadMonitor` (FSEvents on `~/Downloads`), `AppInstallMonitor` (`/Applications`), `IdleMonitor` (idle/night → sleep), `FocusMonitor` (`NSWorkspace` frontmost app).
   - `TypingMonitor` — detects typing **activity only** (a boolean rate). **Never log, store, or transmit keystrokes.**
   - `CodingAgentMonitor` — receives `boomer://` URL events (Claude Code **Stop hook** bridge, see `scripts/claude-code-stop-hook.sh`) and uses `AXUIElement` to position the pet over the frontmost Terminal window before celebrating.
+- **Onboarding** — first-run window (`OnboardingWindowController` + `OnboardingView`): welcome → dog/cat choice with live `PetPreview` cards → naming. Completion flows through `PetStore.completeOnboarding` + `PetEngine.adopt`; if dismissed early, the menu offers "Finish setting up…" (re-opened via the `.boomerShowOnboarding` notification).
+- **Multi-pet unlock:** feeds/plays/pats accrue `carePoints` on the engine; at `PetEngine.unlockThreshold` the other species unlocks (with a celebration) and the menu's adopt row becomes "Switch to …".
 - **Features (later phases):** `NotesStore`, reminders/Pomodoro (`UserNotifications`), `AIService` (Foundation Models).
-- **Platform:** `PermissionsManager` (Accessibility, Input Monitoring, Notifications, Apple Intelligence), SwiftData persistence, `PetSpecies` (dog/cat) with per-species Rive/sound assets.
+- **Platform:** `PermissionsManager` (Accessibility, Input Monitoring, Notifications, Apple Intelligence), `PetStore` (Codable state in `UserDefaults` — onboarding flag, names, unlocks, care points, needs; applies away-time decay on load; SwiftData arrives with Notes in Phase 4), `PetSpecies` (dog/cat) with per-species Rive/sound assets.
 
 ## Conventions & gotchas
 
@@ -65,4 +67,6 @@ xcodebuild test -scheme Boomer -destination 'platform=macOS' \
 - **Phase 0 (scaffold):** menu-bar agent, transparent floating panel, `PetEngine`/`PetStateMachine`/`Needs`, `EventBus`, `boomer://` deep link.
 - **Phase 1 (live pet):** anime-style hand-drawn SwiftUI dog/cat art (chibi proportions, big layered eyes, collars — gold tag for Boomer, button charm for Buttons) with body poses (sit/walk/run/curl/dangle) and per-state expressions; autonomous wandering + sitting + zoomies + gravity + grab-and-throw physics (`PetMotion`); click-to-pat; menu controls (feed/play/nap/switch species). Real Rive `.riv` art can replace the view layer later.
 
-Next up: Phase 2 (onboarding + multi-pet unlock), Phase 3 (system monitors: downloads/typing/coding-agent), Phase 4 (productivity), Phase 5 (local AI). See the plan in `.claude/plans/`.
+- **Phase 2 (onboarding + multi-pet):** first-run onboarding (species choice with live previews, naming), `PetStore` persistence with away-time needs decay, care-points unlock of the second pet, gated species switching in the menu.
+
+Next up: Phase 3 (system monitors: downloads/typing/coding-agent), Phase 4 (productivity), Phase 5 (local AI). See the plan in `.claude/plans/`.

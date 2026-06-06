@@ -15,7 +15,7 @@ enum Mood: String, CustomStringConvertible {
 
 /// Tamagotchi-style needs that decay over time and drive `Mood`.
 /// Each value is `0...1`, where `1` is fully satisfied.
-struct Needs: Equatable {
+struct Needs: Codable, Equatable {
     var hunger: Double = 0.8
     var happiness: Double = 0.8
     var energy: Double = 0.8
@@ -30,9 +30,15 @@ struct Needs: Equatable {
 
     /// Called periodically by `PetEngine`'s decay timer.
     mutating func decay() {
-        hunger = clamp(hunger - 0.02)
-        happiness = clamp(happiness - 0.015)
-        energy = clamp(energy - 0.01)
+        applyDecay(steps: 1)
+    }
+
+    /// Apply `steps` worth of decay at once — used to catch up on time the
+    /// app spent quit (the pet kept living while you were away).
+    mutating func applyDecay(steps: Double) {
+        hunger = clamp(hunger - 0.02 * steps)
+        happiness = clamp(happiness - 0.015 * steps)
+        energy = clamp(energy - 0.01 * steps)
     }
 
     mutating func feed() {

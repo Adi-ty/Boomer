@@ -2,7 +2,8 @@ import Foundation
 import Observation
 
 /// The pet's "brain". Holds the current pet, needs/mood, and high-level state,
-/// and translates events/actions into state transitions. SwiftUI views observe it.
+/// translates events/actions into state transitions, and persists everything
+/// through `PetStore`. SwiftUI views observe it.
 ///
 /// Concurrency: `@MainActor` (it drives UI). Monitors run elsewhere and hand work
 /// in via the `EventBus`, which is drained on the main actor here. Geometry/physics
@@ -11,22 +12,53 @@ import Observation
 @MainActor
 @Observable
 final class PetEngine {
+    /// Feeds/plays/pats needed before the second pet can be adopted.
+    static let unlockThreshold = 10
+
     private(set) var pet: Pet
     private(set) var state: PetState = .idle
-    private(set) var needs = Needs()
+    private(set) var needs: Needs
+    private(set) var carePoints: Int
 
     var mood: Mood {
         needs.mood
     }
 
+    var hasOnboarded: Bool {
+        store.state.hasCompletedOnboarding
+    }
+
+    var otherSpecies: PetSpecies {
+        pet.species == .dog ? .cat : .dog
+    }
+
     private let stateMachine = PetStateMachine()
     private let bus = EventBus()
+    private let store: PetStore
     private var decayTask: Task<Void, Never>?
     private var eventTask: Task<Void, Never>?
     private var transientTask: Task<Void, Never>?
 
-    init(pet: Pet = .boomer) {
-        self.pet = pet
+    init(store: PetStore) {
+        self.store = store
+        let saved = store.state
+
+        // The pet kept living while the app was quit: catch up on decay,
+        // capped at two days so a vacation doesn't return a husk.
+        var needs = saved.needs
+        let elapsedSteps = Date().timeIntervalSince(saved.lastSaved) / 30
+        let steps = min(max(elapsedSteps, 0), 5760)
+        if steps > 1 { needs.applyDecay(steps: steps) }
+        self.needs = needs
+
+        carePoints = saved.carePoints
+        pet = Pet(species: saved.activeSpecies,
+                  name: saved.names[saved.activeSpecies.rawValue])
+    }
+
+    /// An engine for previews/snapshots, backed by a throwaway store.
+    static func preview(species: PetSpecies) -> PetEngine {
+        PetEngine(store: .ephemeral(species: species))
     }
 
     /// Begin the needs-decay loop and start draining the event bus.
@@ -39,17 +71,20 @@ final class PetEngine {
 
     func feed() {
         needs.feed()
+        registerCare()
         enterTransient(.eating, for: 1.3)
     }
 
     func play() {
         needs.play()
+        registerCare()
         enterTransient(.playing, for: 1.4)
     }
 
     /// Clicking/tapping the pet gives it a little attention.
     func pat() {
         needs.happiness = min(1, needs.happiness + 0.12)
+        registerCare()
         enterTransient(.celebrating, for: 1.0)
     }
 
@@ -60,13 +95,45 @@ final class PetEngine {
             cancelTransient()
             request(.sleeping)
         }
+        save()
     }
 
-    /// Preview the other pet (full multi-pet/unlock flow arrives in Phase 2).
-    func switchSpecies() {
-        pet = Pet(species: pet.species == .dog ? .cat : .dog)
+    // MARK: - Pets & unlocking
+
+    func isUnlocked(_ species: PetSpecies) -> Bool {
+        store.state.unlocked.contains(species.rawValue)
+    }
+
+    func name(for species: PetSpecies) -> String {
+        store.state.names[species.rawValue] ?? species.defaultName
+    }
+
+    /// Called when onboarding finishes with the chosen companion.
+    func adopt(species: PetSpecies, name: String) {
+        pet = Pet(species: species, name: name)
         cancelTransient()
         request(.idle)
+        save()
+    }
+
+    /// Switch to an already-adopted pet.
+    func switchTo(_ species: PetSpecies) {
+        guard isUnlocked(species), species != pet.species else { return }
+        pet = Pet(species: species, name: name(for: species))
+        cancelTransient()
+        request(.idle)
+        save()
+    }
+
+    private func registerCare() {
+        carePoints += 1
+        if carePoints >= Self.unlockThreshold, !isUnlocked(otherSpecies) {
+            var next = store.state
+            next.unlocked.append(otherSpecies.rawValue)
+            store.state = next
+            enterTransient(.celebrating, for: 2.5) // adoption-day celebration
+        }
+        save()
     }
 
     // MARK: - External input
@@ -116,12 +183,23 @@ final class PetEngine {
         transientTask = nil
     }
 
+    private func save() {
+        var next = store.state
+        next.activeSpecies = pet.species
+        next.names[pet.species.rawValue] = pet.name
+        next.carePoints = carePoints
+        next.needs = needs
+        store.state = next
+    }
+
     private func startDecayLoop() {
         decayTask?.cancel()
         decayTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
-                self?.needs.decay()
+                guard let self else { return }
+                needs.decay()
+                save()
             }
         }
     }

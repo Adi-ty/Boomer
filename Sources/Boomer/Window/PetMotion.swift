@@ -63,13 +63,12 @@ final class PetMotion {
         tickTask?.cancel()
     }
 
-    #if DEBUG
-        /// Snapshot-mode hook so each pose can be rendered without simulating.
-        func debugSet(activity newActivity: Activity, facing newFacing: Double = 1) {
-            activity = newActivity
-            facing = newFacing
-        }
-    #endif
+    /// Pin a pose without running the simulation loop — used by snapshots and
+    /// the onboarding preview cards.
+    func present(activity newActivity: Activity, facing newFacing: Double = 1) {
+        activity = newActivity
+        facing = newFacing
+    }
 
     // MARK: - Drag input (from DraggablePetView)
 

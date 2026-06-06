@@ -6,6 +6,20 @@ struct MenuBarContent: View {
     @Environment(PetEngine.self) private var engine
 
     var body: some View {
+        if engine.hasOnboarded {
+            petMenu
+        } else {
+            Text("Boomer").font(.headline)
+            Button("Finish setting up…") {
+                NotificationCenter.default.post(name: .boomerShowOnboarding, object: nil)
+            }
+            Divider()
+            quitButton
+        }
+    }
+
+    @ViewBuilder
+    private var petMenu: some View {
         Text("\(engine.pet.name) the \(engine.pet.species == .dog ? "dog" : "cat")")
             .font(.headline)
         Text("Mood: \(engine.mood.description)")
@@ -18,12 +32,22 @@ struct MenuBarContent: View {
 
         Divider()
 
-        Button("Switch to \(engine.pet.species == .dog ? "Buttons (cat)" : "Boomer (dog)")") {
-            engine.switchSpecies()
+        let other = engine.otherSpecies
+        if engine.isUnlocked(other) {
+            Button("Switch to \(engine.name(for: other))") { engine.switchTo(other) }
+        } else {
+            Button(
+                "Adopt \(other.defaultName) — care \(min(engine.carePoints, PetEngine.unlockThreshold))/\(PetEngine.unlockThreshold)"
+            ) {}
+                .disabled(true)
         }
 
         Divider()
 
+        quitButton
+    }
+
+    private var quitButton: some View {
         Button("Quit Boomer") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
     }
