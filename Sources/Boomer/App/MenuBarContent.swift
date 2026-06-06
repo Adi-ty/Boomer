@@ -32,6 +32,22 @@ struct MenuBarContent: View {
 
         Divider()
 
+        // Stay-out-of-the-way controls.
+        Button(engine.calmMode ? "Resume wandering" : "Stay put (calm mode)") {
+            engine.toggleCalmMode()
+        }
+        if engine.isPetHidden {
+            Button("Come back out") {
+                NotificationCenter.default.post(name: .boomerShowPet, object: nil)
+            }
+        } else {
+            Button("Hide for 30 minutes") {
+                NotificationCenter.default.post(name: .boomerHidePet, object: nil)
+            }
+        }
+
+        Divider()
+
         let other = engine.otherSpecies
         if engine.isUnlocked(other) {
             Button("Switch to \(engine.name(for: other))") { engine.switchTo(other) }

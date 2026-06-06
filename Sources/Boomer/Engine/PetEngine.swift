@@ -19,6 +19,10 @@ final class PetEngine {
     private(set) var state: PetState = .idle
     private(set) var needs: Needs
     private(set) var carePoints: Int
+    /// "Stay put" — `PetMotion` checks this to suppress wandering/zoomies.
+    private(set) var calmMode: Bool
+    /// True while the panel is temporarily hidden (menu state only).
+    private(set) var isPetHidden = false
 
     var mood: Mood {
         needs.mood
@@ -53,6 +57,7 @@ final class PetEngine {
         self.needs = needs
 
         carePoints = saved.carePoints
+        calmMode = saved.calmMode
         pet = Pet(species: saved.activeSpecies,
                   name: saved.names[saved.activeSpecies.rawValue])
     }
@@ -97,6 +102,16 @@ final class PetEngine {
             request(.sleeping)
         }
         save()
+    }
+
+    func toggleCalmMode() {
+        calmMode.toggle()
+        save()
+    }
+
+    /// Bookkeeping for the menu while the AppDelegate hides/shows the panel.
+    func setPetHidden(_ hidden: Bool) {
+        isPetHidden = hidden
     }
 
     // MARK: - Pets & unlocking
@@ -206,6 +221,7 @@ final class PetEngine {
         next.names[pet.species.rawValue] = pet.name
         next.carePoints = carePoints
         next.needs = needs
+        next.calmMode = calmMode
         store.state = next
     }
 

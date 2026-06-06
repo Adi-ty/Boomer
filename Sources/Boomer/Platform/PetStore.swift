@@ -15,6 +15,26 @@ struct PersistedState: Codable, Equatable {
     var needs = Needs()
     /// When state was last written; used to decay needs for time spent away.
     var lastSaved = Date()
+    /// "Stay put": no wandering/zoomies; the pet sits where it is.
+    var calmMode = false
+
+    init() {}
+
+    /// Migration-safe decoding: every field falls back to its default when the
+    /// key is missing, so adding fields never wipes an existing user's pet.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        hasCompletedOnboarding = try container
+            .decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        activeSpecies = try container
+            .decodeIfPresent(PetSpecies.self, forKey: .activeSpecies) ?? .dog
+        names = try container.decodeIfPresent([String: String].self, forKey: .names) ?? [:]
+        unlocked = try container.decodeIfPresent([String].self, forKey: .unlocked) ?? []
+        carePoints = try container.decodeIfPresent(Int.self, forKey: .carePoints) ?? 0
+        needs = try container.decodeIfPresent(Needs.self, forKey: .needs) ?? Needs()
+        lastSaved = try container.decodeIfPresent(Date.self, forKey: .lastSaved) ?? Date()
+        calmMode = try container.decodeIfPresent(Bool.self, forKey: .calmMode) ?? false
+    }
 }
 
 @MainActor

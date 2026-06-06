@@ -47,6 +47,18 @@ final class PetWindowController {
         motion.start(at: dropInSpot())
     }
 
+    /// Temporarily remove the pet from the screen (focus time).
+    func hidePanel() {
+        motion.stop()
+        panel.orderOut(nil)
+    }
+
+    /// Bring the pet back where it left off.
+    func showPanel() {
+        panel.orderFrontRegardless()
+        motion.resume()
+    }
+
     /// A coding agent finished: hop onto the frontmost terminal window and
     /// celebrate from its top edge (the engine's celebration runs in parallel
     /// via the event bus). No-op without Accessibility or a terminal window.

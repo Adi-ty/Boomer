@@ -4,6 +4,9 @@ import SwiftUI
 extension Notification.Name {
     /// Posted (e.g. from the menu) to re-open onboarding if it was dismissed.
     static let boomerShowOnboarding = Notification.Name("boomerShowOnboarding")
+    /// Posted from the menu to hide the pet for a while / bring it back.
+    static let boomerHidePet = Notification.Name("boomerHidePet")
+    static let boomerShowPet = Notification.Name("boomerShowPet")
 }
 
 /// Owns the long-lived objects: the persistence store, the pet "brain"
@@ -42,6 +45,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.showOnboarding() }
         }
+        NotificationCenter.default.addObserver(
+            forName: .boomerHidePet, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.hidePet(for: 30 * 60) }
+        }
+        NotificationCenter.default.addObserver(
+            forName: .boomerShowPet, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.showPetAgain() }
+        }
+    }
+
+    // MARK: - Temporary hide
+
+    private var unhideTask: Task<Void, Never>?
+
+    private func hidePet(for seconds: TimeInterval) {
+        petWindow?.hidePanel()
+        engine.setPetHidden(true)
+        unhideTask?.cancel()
+        unhideTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled else { return }
+            self?.showPetAgain()
+        }
+    }
+
+    private func showPetAgain() {
+        unhideTask?.cancel()
+        petWindow?.showPanel()
+        engine.setPetHidden(false)
     }
 
     /// Handles `boomer://…` deep links (the Claude Code Stop-hook bridge).

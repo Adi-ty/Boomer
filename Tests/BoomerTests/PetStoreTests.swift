@@ -53,6 +53,19 @@ struct PetStoreTests {
         #expect(engine.pet.name == "Buttons")
     }
 
+    @Test func decodingStateWithoutNewerFieldsKeepsData() throws {
+        // Simulate a save from an older build that predates `calmMode`.
+        let json = """
+        {"hasCompletedOnboarding": true, "activeSpecies": "cat",
+         "names": {"cat": "Buttons"}, "unlocked": ["cat"], "carePoints": 4}
+        """
+        let state = try JSONDecoder().decode(PersistedState.self, from: Data(json.utf8))
+        #expect(state.hasCompletedOnboarding)
+        #expect(state.activeSpecies == .cat)
+        #expect(state.carePoints == 4)
+        #expect(state.calmMode == false)
+    }
+
     @Test func awayTimeDecaysNeeds() throws {
         let defaults = freshDefaults()
         var stale = PersistedState()

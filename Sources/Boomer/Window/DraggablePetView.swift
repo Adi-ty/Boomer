@@ -19,9 +19,16 @@ final class DraggablePetView: NSView {
     private var lastVelocity: CGVector = .zero
     private var didDrag = false
 
-    /// Route all mouse events here rather than to the hosted SwiftUI view.
-    override func hitTest(_: NSPoint) -> NSView? {
-        self
+    /// Route mouse events here rather than to the hosted SwiftUI view — but
+    /// only within the pet's body. Clicks in the window's transparent margins
+    /// fall through to whatever is underneath, so the pet never steals a click
+    /// it isn't visually occupying. (Thin tail tips are deliberately excluded.)
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        petHitRegion.contains(point) ? self : nil
+    }
+
+    private var petHitRegion: NSRect {
+        NSRect(x: bounds.midX - 70, y: 0, width: 140, height: bounds.height - 16)
     }
 
     override var mouseDownCanMoveWindow: Bool {

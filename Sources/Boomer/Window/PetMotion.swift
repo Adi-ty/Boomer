@@ -53,18 +53,29 @@ final class PetMotion {
     func start(at origin: CGPoint) {
         position = origin
         moveHandler?(origin)
-        lastTime = Date()
+        startLoop()
+    }
+
+    func stop() {
         tickTask?.cancel()
+        tickTask = nil
+    }
+
+    /// Restart the simulation where it left off (after a temporary hide).
+    func resume() {
+        guard tickTask == nil else { return }
+        startLoop()
+    }
+
+    private func startLoop() {
+        tickTask?.cancel()
+        lastTime = Date()
         tickTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(16))
                 self?.tick()
             }
         }
-    }
-
-    func stop() {
-        tickTask?.cancel()
     }
 
     /// Pin a pose without running the simulation loop — used by snapshots and
@@ -240,6 +251,12 @@ final class PetMotion {
         }
         if floorOverride != nil {
             // Perched on a window: sit proudly, don't wander off the edge.
+            if activity != .sitting { activity = .sitting }
+            nextDecision = now.addingTimeInterval(1)
+            return
+        }
+        if engine.calmMode {
+            // "Stay put": settle into a sit and stay out of the way.
             if activity != .sitting { activity = .sitting }
             nextDecision = now.addingTimeInterval(1)
             return
