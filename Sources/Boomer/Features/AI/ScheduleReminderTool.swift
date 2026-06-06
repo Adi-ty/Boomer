@@ -20,8 +20,9 @@ struct ScheduleReminderTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
+        // Clamp model-controlled values: bounded delay, bounded title length.
         let minutes = max(1, min(arguments.minutes, 12 * 60))
-        let title = arguments.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = String(arguments.title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120))
         guard !title.isEmpty else {
             return "No reminder scheduled — the title was empty."
         }

@@ -53,8 +53,10 @@ enum TerminalLocator {
         var windowRef: CFTypeRef?
         var window: AXUIElement?
 
-        if AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute as CFString, &windowRef) == .success {
-            window = (windowRef as! AXUIElement)
+        if AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute as CFString, &windowRef) == .success,
+           let ref = windowRef, CFGetTypeID(ref) == AXUIElementGetTypeID()
+        {
+            window = (ref as! AXUIElement)
         } else {
             var windowsRef: CFTypeRef?
             if AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &windowsRef) == .success,

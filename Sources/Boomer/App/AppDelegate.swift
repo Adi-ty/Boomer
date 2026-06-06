@@ -152,13 +152,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         engine.setPetHidden(false)
     }
 
+    private var lastAgentVisit = Date.distantPast
+
     /// Handles `boomer://…` deep links (the Claude Code Stop-hook bridge).
     /// The engine celebrates via the event bus; the window layer additionally
     /// hops the pet onto the frontmost terminal when Accessibility allows.
+    /// Deep links are unauthenticated local input — visits are rate-limited so
+    /// a misbehaving page/process can't keep teleporting the pet around.
     func application(_: NSApplication, open urls: [URL]) {
         for url in urls where url.scheme == "boomer" {
             engine.handleDeepLink(url)
-            if url.host == "event", url.lastPathComponent == "agent-done" {
+            if url.host == "event", url.lastPathComponent == "agent-done",
+               Date().timeIntervalSince(lastAgentVisit) > 3
+            {
+                lastAgentVisit = Date()
                 petWindow?.celebrateAtFrontmostTerminal()
             }
         }

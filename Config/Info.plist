@@ -40,10 +40,8 @@
 		</dict>
 	</array>
 
-	<!-- Usage strings for prompted permissions. -->
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Boomer transcribes audio on-device so it can summarize what you watched.</string>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>Boomer reads window positions so it can sit on your Terminal and celebrate.</string>
+	<!-- Note: Accessibility and Input Monitoring have no Info.plist usage keys
+	     on macOS; their purpose is explained in-app (Superpowers menu). No other
+	     privacy-gated capabilities are declared because none are used. -->
 </dict>
 </plist>

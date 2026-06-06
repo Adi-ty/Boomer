@@ -206,11 +206,13 @@ final class PetEngine {
     /// integrations (Claude Code Stop hook, opencode plugin, …).
     func handleDeepLink(_ url: URL) {
         if url.host == "event", url.lastPathComponent == "agent-done" {
-            let agent = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            // The URL is unauthenticated local input (any app/webpage can open
+            // it); the agent name is clamped and only ever used as event data.
+            let raw = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?
                 .first { $0.name == "agent" }?
                 .value ?? "unknown"
-            bus.publish(.codingAgentCompleted(agent: agent))
+            bus.publish(.codingAgentCompleted(agent: String(raw.prefix(64))))
         }
     }
 
