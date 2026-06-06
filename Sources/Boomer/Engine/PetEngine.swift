@@ -21,6 +21,10 @@ final class PetEngine {
     private(set) var carePoints: Int
     /// "Stay put" — `PetMotion` checks this to suppress wandering/zoomies.
     private(set) var calmMode: Bool
+    /// Soft sound effects on celebrations/meals (persisted).
+    private(set) var soundsEnabled: Bool
+    /// Set by the AppDelegate; the engine stays AppKit-free.
+    @ObservationIgnored var soundHandler: ((PetSound) -> Void)?
     /// True while the panel is temporarily hidden (menu state only).
     private(set) var isPetHidden = false
     /// Text the pet is currently "saying" in its speech bubble.
@@ -61,6 +65,7 @@ final class PetEngine {
 
         carePoints = saved.carePoints
         calmMode = saved.calmMode
+        soundsEnabled = saved.soundsEnabled
         pet = Pet(species: saved.activeSpecies,
                   name: saved.names[saved.activeSpecies.rawValue])
     }
@@ -109,6 +114,11 @@ final class PetEngine {
 
     func toggleCalmMode() {
         calmMode.toggle()
+        save()
+    }
+
+    func toggleSounds() {
+        soundsEnabled.toggle()
         save()
     }
 
@@ -252,6 +262,13 @@ final class PetEngine {
     private func enterTransient(_ newState: PetState, for seconds: Double) {
         if state == .sleeping { request(.idle) }
         request(newState)
+        if soundsEnabled {
+            switch newState {
+            case .celebrating: soundHandler?(.celebrate)
+            case .eating: soundHandler?(.munch)
+            default: break
+            }
+        }
         cancelTransient()
         transientTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
@@ -272,6 +289,7 @@ final class PetEngine {
         next.carePoints = carePoints
         next.needs = needs
         next.calmMode = calmMode
+        next.soundsEnabled = soundsEnabled
         store.state = next
     }
 

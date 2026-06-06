@@ -9,7 +9,7 @@ final class BoardWindowController {
 
     init(container: ModelContainer) {
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 440),
+            contentRect: NSRect(origin: .zero, size: DS.boardSize),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

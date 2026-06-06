@@ -73,6 +73,21 @@ struct MenuBarContent: View {
 
         Divider()
 
+        Button {
+            engine.toggleSounds()
+        } label: {
+            Label("Sound effects",
+                  systemImage: engine.soundsEnabled ? "checkmark.circle.fill" : "circle")
+        }
+        Button {
+            LaunchAtLogin.toggle()
+        } label: {
+            Label("Launch at login",
+                  systemImage: LaunchAtLogin.isEnabled ? "checkmark.circle.fill" : "circle")
+        }
+
+        Divider()
+
         let other = engine.otherSpecies
         if engine.isUnlocked(other) {
             Button("Switch to \(engine.name(for: other))") { engine.switchTo(other) }

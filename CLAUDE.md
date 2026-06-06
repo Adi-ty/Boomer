@@ -77,5 +77,6 @@ xcodebuild test -scheme Boomer -destination 'platform=macOS' \
 - **Phase 3 (smart reactions):** download/install celebrations, typing companion (sits + watches your keyboard), idle sleep/wake, sit-on-Terminal coding-agent celebration via the Stop-hook deep link + AX positioning (also an opencode plugin), "Superpowers" permissions submenu, calm mode + temporary hide.
 - **Phase 4 (productivity):** notes & reminders board (SwiftData), pet-delivered reminders (speech bubble + notification), focus/Pomodoro companion.
 - **Phase 5 (local AI):** in-character chat with streaming, model-driven reminder scheduling via tool calling, clipboard summarize, thinking animation. All on-device; availability-gated.
+- **Phase 6 (polish):** generated app icon (`make icon` → `scripts/make-boomer-icon.swift`), sound effects (system sounds, persisted toggle, `engine.soundHandler` keeps the engine AppKit-free), launch at login (`SMAppService`), `DS` tokens (window sizes shared between views and their window controllers), clone-and-build README. Distribution is deliberately source-only (no signing/notarization/updater).
 
-Next up: Phase 6 (polish & ship: sounds, accessories, launch-at-login, notarized DMG). See the plan in `.claude/plans/`.
+The roadmap is complete; future work is feature ideas (accessories, hotkeys, "watch with me", stats), not phases.

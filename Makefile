@@ -59,5 +59,9 @@ lint:
 format:
 	swiftformat .
 
+# Regenerate the app icon from code (writes into Assets.xcassets).
+icon:
+	swift scripts/make-boomer-icon.swift
+
 clean:
 	rm -rf Boomer.xcodeproj DerivedData build

@@ -48,6 +48,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
+        engine.soundHandler = { SoundEffects.play($0) }
+
         if store.state.hasCompletedOnboarding {
             startPet()
         } else {

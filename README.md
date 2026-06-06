@@ -21,16 +21,20 @@ Onboarding lets you pick your companion; the other can be unlocked later.
   is the CLT; the permanent fix is `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 - Distributed direct + notarized (intentionally **not** sandboxed)
 
-## Getting started
+## Install (build from source)
+
+Boomer is distributed as source — clone and build, no signing required:
 
 ```bash
+git clone https://github.com/Adi-ty/Boomer.git && cd Boomer
 make bootstrap   # installs xcodegen/swiftlint/swiftformat (if missing) and generates the project
 make run         # build and launch
-make test        # run the tests
 ```
 
-`make` targets are documented via `make help`. The Xcode project is generated
-from `project.yml` — don't commit or hand-edit `Boomer.xcodeproj`.
+Look for the 🐾 in your menu bar; onboarding opens on first launch.
+To update later: `git pull && make run`. Other targets: `make help`
+(`test`, `lint`, `snapshots`, `icon`). The Xcode project is generated from
+`project.yml` — don't commit or hand-edit `Boomer.xcodeproj`.
 
 ## Claude Code integration
 

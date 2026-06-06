@@ -75,7 +75,7 @@ struct OnboardingView: View {
         .overlay(alignment: .topLeading) { backButton }
         .overlay(alignment: .bottom) { stepDots.padding(.bottom, 18) }
         .animation(.spring(duration: 0.35), value: step)
-        .frame(width: 560, height: 620)
+        .frame(width: DS.onboardingSize.width, height: DS.onboardingSize.height)
         .environment(\.colorScheme, .light) // controls match the fixed palette
     }
 

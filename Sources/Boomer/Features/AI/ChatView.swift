@@ -36,7 +36,7 @@ struct ChatView: View {
 
             inputBar
         }
-        .frame(width: 380, height: 500)
+        .frame(width: DS.chatSize.width, height: DS.chatSize.height)
     }
 
     // MARK: - Pieces

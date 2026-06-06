@@ -17,6 +17,8 @@ struct PersistedState: Codable, Equatable {
     var lastSaved = Date()
     /// "Stay put": no wandering/zoomies; the pet sits where it is.
     var calmMode = false
+    /// Soft sound effects on celebrations/meals.
+    var soundsEnabled = true
 
     init() {}
 
@@ -34,6 +36,7 @@ struct PersistedState: Codable, Equatable {
         needs = try container.decodeIfPresent(Needs.self, forKey: .needs) ?? Needs()
         lastSaved = try container.decodeIfPresent(Date.self, forKey: .lastSaved) ?? Date()
         calmMode = try container.decodeIfPresent(Bool.self, forKey: .calmMode) ?? false
+        soundsEnabled = try container.decodeIfPresent(Bool.self, forKey: .soundsEnabled) ?? true
     }
 }
 

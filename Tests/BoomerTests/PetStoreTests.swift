@@ -64,6 +64,7 @@ struct PetStoreTests {
         #expect(state.activeSpecies == .cat)
         #expect(state.carePoints == 4)
         #expect(state.calmMode == false)
+        #expect(state.soundsEnabled == true)
     }
 
     @Test func awayTimeDecaysNeeds() throws {

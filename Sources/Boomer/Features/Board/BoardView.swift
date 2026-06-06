@@ -29,7 +29,7 @@ struct BoardView: View {
             case .reminders: RemindersTab()
             }
         }
-        .frame(width: 360, height: 440)
+        .frame(width: DS.boardSize.width, height: DS.boardSize.height)
     }
 }
 
