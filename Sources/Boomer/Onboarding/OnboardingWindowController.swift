@@ -9,7 +9,7 @@ final class OnboardingWindowController {
 
     init(onFinish: @escaping (PetSpecies, String) -> Void) {
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 620),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -18,6 +18,9 @@ final class OnboardingWindowController {
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
+        // The flow uses a fixed light palette; pin the window to light
+        // appearance so dark mode can't render white-on-cream text.
+        window.appearance = NSAppearance(named: .aqua)
         window.contentView = NSHostingView(rootView: OnboardingView(onFinish: onFinish))
         window.center()
     }
