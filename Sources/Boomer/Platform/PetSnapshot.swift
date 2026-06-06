@@ -15,7 +15,39 @@
 
             renderPets(into: folder)
             renderOnboarding(into: folder)
+            renderBoard(into: folder)
+            renderBubble(into: folder)
             return true
+        }
+
+        private static func renderBoard(into folder: URL) {
+            guard let persistence = try? PersistenceService(inMemory: true) else { return }
+            let context = persistence.context
+            context.insert(Note(text: "Boomer needs more treats"))
+            context.insert(Note(text: "Ship phase 4 tonight 🚀"))
+            context.insert(Reminder(title: "Stand up and stretch", dueDate: Date().addingTimeInterval(900)))
+            let delivered = Reminder(title: "Drink water", dueDate: Date().addingTimeInterval(-600))
+            delivered.isDelivered = true
+            context.insert(delivered)
+
+            let size = CGSize(width: 360, height: 440)
+            write(BoardView(initialTab: .notes).modelContainer(persistence.container),
+                  size: size, to: folder, name: "board-notes")
+            write(BoardView(initialTab: .reminders).modelContainer(persistence.container),
+                  size: size, to: folder, name: "board-reminders")
+        }
+
+        private static func renderBubble(into folder: URL) {
+            let engine = PetEngine.preview(species: .dog)
+            engine.announce("Stand up and stretch!", for: 60)
+            let motion = PetMotion(engine: engine, size: CGSize(width: 220, height: 300))
+            motion.present(activity: .sitting)
+            let view = ZStack {
+                RoundedRectangle(cornerRadius: 18).fill(Color(white: 0.93))
+                PetWindowRoot(engine: engine, motion: motion)
+            }
+            .frame(width: 220, height: 300)
+            write(view, size: CGSize(width: 220, height: 300), to: folder, name: "pet-bubble")
         }
 
         private static func renderPets(into folder: URL) {

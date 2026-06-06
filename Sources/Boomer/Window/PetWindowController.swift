@@ -6,7 +6,9 @@ import SwiftUI
 /// screen by `PetMotion`; mouse interaction is handled by `DraggablePetView`.
 @MainActor
 final class PetWindowController {
-    static let size = NSSize(width: 200, height: 220)
+    /// Pet art is 200×220 at the bottom; the extra headroom hosts the speech
+    /// bubble and celebration effects.
+    static let size = NSSize(width: 220, height: 300)
 
     private let panel: NSPanel
     private let engine: PetEngine
@@ -32,7 +34,7 @@ final class PetWindowController {
         panel.hidesOnDeactivate = false
 
         content = DraggablePetView(frame: NSRect(origin: .zero, size: Self.size))
-        let host = NSHostingView(rootView: PetView(engine: engine, motion: motion))
+        let host = NSHostingView(rootView: PetWindowRoot(engine: engine, motion: motion))
         host.frame = content.bounds
         host.autoresizingMask = [.width, .height]
         content.addSubview(host)

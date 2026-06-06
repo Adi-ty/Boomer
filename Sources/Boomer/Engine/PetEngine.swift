@@ -23,6 +23,8 @@ final class PetEngine {
     private(set) var calmMode: Bool
     /// True while the panel is temporarily hidden (menu state only).
     private(set) var isPetHidden = false
+    /// Text the pet is currently "saying" in its speech bubble.
+    private(set) var announcement: String?
 
     var mood: Mood {
         needs.mood
@@ -42,6 +44,7 @@ final class PetEngine {
     private var decayTask: Task<Void, Never>?
     private var eventTask: Task<Void, Never>?
     private var transientTask: Task<Void, Never>?
+    @ObservationIgnored private var announcementTask: Task<Void, Never>?
     @ObservationIgnored private var lastCelebrationAt = Date.distantPast
 
     init(store: PetStore) {
@@ -107,6 +110,41 @@ final class PetEngine {
     func toggleCalmMode() {
         calmMode.toggle()
         save()
+    }
+
+    // MARK: - Speech & deliveries
+
+    /// Show a speech bubble above the pet for a few seconds.
+    func announce(_ text: String, for seconds: Double = 8) {
+        announcementTask?.cancel()
+        announcement = text
+        announcementTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled else { return }
+            self?.announcement = nil
+        }
+    }
+
+    /// Celebrate, optionally saying something while doing it.
+    func celebrate(saying text: String? = nil) {
+        if let text { announce(text) }
+        enterTransient(.celebrating, for: 2.5)
+    }
+
+    /// A reminder came due — the pet delivers it.
+    func deliverReminder(_ title: String) {
+        announce(title, for: 10)
+        enterTransient(.celebrating, for: 2.0)
+    }
+
+    /// Focus session: nap quietly until the break.
+    func beginFocusNap() {
+        cancelTransient()
+        request(.sleeping)
+    }
+
+    func endFocusNap() {
+        if state == .sleeping { request(.idle) }
     }
 
     /// Bookkeeping for the menu while the AppDelegate hides/shows the panel.

@@ -28,7 +28,9 @@ final class DraggablePetView: NSView {
     }
 
     private var petHitRegion: NSRect {
-        NSRect(x: bounds.midX - 70, y: 0, width: 140, height: bounds.height - 16)
+        // The pet art occupies the bottom ~205pt; the headroom above is for
+        // the speech bubble and stays click-through.
+        NSRect(x: bounds.midX - 70, y: 0, width: 140, height: min(bounds.height, 205))
     }
 
     override var mouseDownCanMoveWindow: Bool {

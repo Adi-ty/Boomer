@@ -4,6 +4,7 @@ import SwiftUI
 /// dragging the pet itself; this is for the things you can't do by poking it.
 struct MenuBarContent: View {
     @Environment(PetEngine.self) private var engine
+    @Environment(FocusTimer.self) private var focus
 
     var body: some View {
         if engine.hasOnboarded {
@@ -29,6 +30,22 @@ struct MenuBarContent: View {
         Button("Feed") { engine.feed() }
         Button("Play") { engine.play() }
         Button(engine.state == .sleeping ? "Wake up" : "Take a nap") { engine.toggleSleep() }
+
+        Divider()
+
+        Button("Notes & Reminders…") {
+            NotificationCenter.default.post(name: .boomerShowBoard, object: nil)
+        }
+
+        if focus.isActive {
+            Text("Focusing — \(focus.remainingDescription)")
+            Button("End focus early") { focus.cancel() }
+        } else {
+            Menu("Start focus session") {
+                Button("25 minutes") { focus.start(minutes: 25) }
+                Button("50 minutes") { focus.start(minutes: 50) }
+            }
+        }
 
         Divider()
 
@@ -87,6 +104,14 @@ struct MenuBarContent: View {
                       systemImage: permissions.hasInputMonitoring ? "checkmark.circle.fill" : "circle")
             }
             .disabled(permissions.hasInputMonitoring)
+
+            Button {
+                permissions.requestNotifications()
+            } label: {
+                Label("Deliver reminders & break alerts (Notifications)",
+                      systemImage: permissions.notificationsAuthorized ? "checkmark.circle.fill" : "circle")
+            }
+            .disabled(permissions.notificationsAuthorized)
 
             Divider()
 

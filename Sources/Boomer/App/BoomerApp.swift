@@ -11,6 +11,7 @@ struct BoomerApp: App {
         MenuBarExtra("Boomer", systemImage: "pawprint.fill") {
             MenuBarContent()
                 .environment(appDelegate.engine)
+                .environment(appDelegate.focus)
         }
         .menuBarExtraStyle(.menu)
     }

@@ -1,5 +1,7 @@
 import AppKit
+import SwiftData
 import SwiftUI
+import UserNotifications
 
 extension Notification.Name {
     /// Posted (e.g. from the menu) to re-open onboarding if it was dismissed.
@@ -7,6 +9,8 @@ extension Notification.Name {
     /// Posted from the menu to hide the pet for a while / bring it back.
     static let boomerHidePet = Notification.Name("boomerHidePet")
     static let boomerShowPet = Notification.Name("boomerShowPet")
+    /// Posted from the menu to open the notes/reminders board.
+    static let boomerShowBoard = Notification.Name("boomerShowBoard")
 }
 
 /// Owns the long-lived objects: the persistence store, the pet "brain"
@@ -16,13 +20,18 @@ extension Notification.Name {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let store: PetStore
     let engine: PetEngine
+    let focus: FocusTimer
+    private let persistence: PersistenceService?
     private var petWindow: PetWindowController?
     private var onboarding: OnboardingWindowController?
     private var monitors: MonitorCoordinator?
+    private var board: BoardWindowController?
 
     override init() {
         store = PetStore()
         engine = PetEngine(store: store)
+        focus = FocusTimer(engine: engine)
+        persistence = try? PersistenceService()
         super.init()
     }
 
@@ -54,6 +63,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forName: .boomerShowPet, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.showPetAgain() }
+        }
+        NotificationCenter.default.addObserver(
+            forName: .boomerShowBoard, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.showBoard() }
+        }
+
+        UNUserNotificationCenter.current().delegate = self
+    }
+
+    private func showBoard() {
+        guard let persistence else { return }
+        if board == nil {
+            board = BoardWindowController(container: persistence.container)
+        }
+        board?.show()
+    }
+
+    /// A scheduled notification fired while we're running: the pet delivers it
+    /// in person too, and the reminder record is marked delivered.
+    private func notificationFired(id: String, body: String) {
+        engine.deliverReminder(body)
+        guard let context = persistence?.context else { return }
+        let descriptor = FetchDescriptor<Reminder>(predicate: #Predicate { $0.notificationID == id })
+        if let match = try? context.fetch(descriptor).first {
+            match.isDelivered = true
         }
     }
 
@@ -114,5 +149,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         onboarding?.show()
+    }
+}
+
+// MARK: - UNUserNotificationCenterDelegate
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    nonisolated func userNotificationCenter(
+        _: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        let body = notification.request.content.body
+        let id = notification.request.identifier
+        await MainActor.run { self.notificationFired(id: id, body: body) }
+        return [.banner, .sound]
     }
 }
