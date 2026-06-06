@@ -57,6 +57,9 @@ xcodebuild test -scheme Boomer -destination 'platform=macOS' \
 
 ## Conventions & gotchas
 
+- **Always build (and run the tests) after a change before claiming it works.** A SwiftUI signature mismatch fails the whole module, so a single missed call site breaks the build.
+- **Accessibility:** the pet exposes itself to VoiceOver as one element describing name/species/current state, with bubble announcements appended (`PetWindowRoot.accessibilityDescription`) — keep that in sync when adding states. Don't rely on color alone for meaning.
+
 - **Swift 6 strict concurrency** is on (`complete`). UI and `PetEngine` are `@MainActor`; monitors are `actor`s or run off-main and hand events to the bus. Don't cross isolation without `await`.
 - **Rive integration:** add a behavior by exposing an input in the `.riv` state machine, then map `PetState` → that input in one place (`PetEngine.request` / `PetStateMachine`). Keep the Swift enum and the Rive inputs in sync.
 - **AI is optional at runtime:** always gate on `SystemLanguageModel.availability` and degrade gracefully when Apple Intelligence is off or still downloading.

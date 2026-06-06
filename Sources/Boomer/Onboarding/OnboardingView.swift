@@ -330,5 +330,7 @@ private struct SpeciesCard: View {
         .onHover { hovering = $0 }
         .animation(.spring(duration: 0.25), value: hovering)
         .animation(.spring(duration: 0.25), value: isSelected)
+        .accessibilityLabel("\(title), \(subtitle)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

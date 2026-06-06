@@ -47,5 +47,24 @@ struct PetWindowRoot: View {
                height: PetWindowController.size.height,
                alignment: .bottom)
         .animation(.spring(duration: 0.3), value: engine.announcement)
+        // The pet is one VoiceOver element describing who it is and what it's
+        // doing; announcements are appended so they're never visual-only.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityDescription)
+    }
+
+    private var accessibilityDescription: String {
+        let species = engine.pet.species == .dog ? "dog" : "cat"
+        let doing = switch engine.state {
+        case .sleeping: "sleeping"
+        case .celebrating: "celebrating"
+        case .eating: "eating"
+        case .playing: "playing"
+        case .typing: "keeping you company while you type"
+        case .thinking: "thinking"
+        default: "feeling \(engine.mood.description.lowercased())"
+        }
+        let saying = engine.announcement.map { ", saying: \($0)" } ?? ""
+        return "\(engine.pet.name) the \(species), \(doing)\(saying)"
     }
 }
