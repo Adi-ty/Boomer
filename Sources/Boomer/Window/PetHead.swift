@@ -52,11 +52,11 @@ struct PetHeadView: View {
 
     /// Fluffy fur bumps on the dog's crown (puppy bangs).
     private var topTuft: some View {
-        ForEach(Array([-16.0, 0.0, 16.0].enumerated()), id: \.offset) { index, x in
+        ForEach(Array([-21.0, -7.0, 7.0, 21.0].enumerated()), id: \.offset) { index, x in
             Ellipse()
                 .fill(palette.body)
-                .frame(width: 28, height: 20)
-                .offset(x: x, y: -48 + (index == 1 ? -4 : 0))
+                .frame(width: 25, height: 19)
+                .offset(x: x, y: -47 + (index == 1 || index == 2 ? -6 : 0))
         }
     }
 

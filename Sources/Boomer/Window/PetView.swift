@@ -70,7 +70,7 @@ struct PetView: View {
                 .scaleEffect(anim.breathe)
                 .offset(y: 50)
             Ellipse().fill(palette.belly).frame(width: 50, height: 66).offset(y: 60)
-            chestFluff(palette).offset(y: 26)
+            chestFluff(anim, palette).offset(y: 26)
             // front legs + paws
             ForEach([-1.0, 1.0], id: \.self) { side in
                 Capsule().fill(palette.body).frame(width: 15, height: 46).offset(x: side * 11, y: 73)
@@ -81,12 +81,15 @@ struct PetView: View {
         }
     }
 
-    private func chestFluff(_ palette: Palette) -> some View {
-        ForEach(Array([-12.0, 0.0, 12.0].enumerated()), id: \.offset) { index, x in
+    private func chestFluff(_ anim: Anim, _ palette: Palette) -> some View {
+        // The dog gets a fuller retriever chest ruff.
+        let positions: [Double] = anim.species == .dog ? [-22, -11, 0, 11, 22] : [-12, 0, 12]
+        let size: CGFloat = anim.species == .dog ? 15 : 18
+        return ForEach(Array(positions.enumerated()), id: \.offset) { index, x in
             Circle()
                 .fill(palette.belly)
-                .frame(width: 18, height: 18)
-                .offset(x: x, y: index == 1 ? 5 : 0)
+                .frame(width: size, height: size)
+                .offset(x: x, y: index.isMultiple(of: 2) ? 0 : 6)
         }
     }
 
@@ -190,11 +193,14 @@ struct PetView: View {
                     .rotationEffect(.degrees(anim.tailWag * 0.35), anchor: .bottomLeading)
                     .offset(x: 44, y: 36)
             case .standing, .walking:
+                // Mirrored so the base (bottom-trailing) tucks into the rump and
+                // the wag pivots around the attachment, not the tip.
                 CatTailShape()
                     .stroke(palette.body, style: .init(lineWidth: 9, lineCap: .round))
                     .frame(width: 48, height: 78)
-                    .rotationEffect(.degrees(anim.tailWag * 0.3), anchor: .bottomTrailing)
-                    .offset(x: -64, y: 26)
+                    .scaleEffect(x: -1)
+                    .rotationEffect(.degrees(anim.tailWag * 0.5), anchor: .bottomTrailing)
+                    .offset(x: -60, y: 26)
             case .running:
                 Capsule()
                     .fill(palette.body)
@@ -213,17 +219,16 @@ struct PetView: View {
         } else {
             switch pose {
             case .sitting:
-                Ellipse()
-                    .fill(palette.accent)
-                    .frame(width: 40, height: 15)
+                dogTailPlume(palette)
                     .rotationEffect(.degrees(anim.tailWag), anchor: .leading)
-                    .offset(x: 40, y: 88)
+                    .offset(x: 42, y: 86)
             case .standing, .walking, .running:
-                Ellipse()
-                    .fill(palette.accent)
-                    .frame(width: 42, height: 15)
-                    .rotationEffect(.degrees(-22 + anim.tailWag), anchor: .leading)
-                    .offset(x: -56, y: 42)
+                // Mirrored so the attachment (trailing) sits inside the torso
+                // and the plume wags from its base.
+                dogTailPlume(palette)
+                    .scaleEffect(x: -1)
+                    .rotationEffect(.degrees(22 - anim.tailWag), anchor: .trailing)
+                    .offset(x: -50, y: 40)
             case .dangling:
                 Ellipse().fill(palette.accent).frame(width: 14, height: 32).offset(x: -28, y: 66)
             case .curled:
@@ -233,6 +238,26 @@ struct PetView: View {
     }
 
     // MARK: - Shared chrome
+
+    /// A fluffy, feathered retriever tail (tip toward trailing edge).
+    private func dogTailPlume(_ palette: Palette) -> some View {
+        ZStack {
+            Ellipse()
+                .fill(palette.accent)
+                .frame(width: 30, height: 11)
+                .rotationEffect(.degrees(-16), anchor: .leading)
+                .offset(x: 6, y: -4)
+            Ellipse()
+                .fill(palette.accent.opacity(0.92))
+                .frame(width: 30, height: 11)
+                .rotationEffect(.degrees(15), anchor: .leading)
+                .offset(x: 6, y: 4)
+            Ellipse()
+                .fill(palette.accent)
+                .frame(width: 42, height: 14)
+        }
+        .frame(width: 46, height: 18)
+    }
 
     private func collarView(_ anim: Anim, _ palette: Palette) -> some View {
         ZStack {
