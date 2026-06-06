@@ -1,21 +1,24 @@
 import AppKit
 import Observation
 
-/// Drives where the pet *is* on screen: autonomous wandering, gravity, and
-/// grab-and-throw physics. Moves the pet's window via `moveHandler`. The pet's
-/// *expression* (sleeping, celebrating, …) lives in `PetEngine`; this reads it.
+/// Drives where the pet *is* on screen: autonomous wandering (walk, sit, the
+/// occasional zoomies), gravity, and grab-and-throw physics. Moves the pet's
+/// window via `moveHandler`. The pet's *expression* (sleeping, celebrating, …)
+/// lives in `PetEngine`; this reads it.
 ///
 /// All coordinates are AppKit screen points (origin bottom-left, y increases up).
 @MainActor
 @Observable
 final class PetMotion {
-    enum Activity { case idle, walking, falling, dragging }
+    enum Activity { case idle, sitting, walking, running, falling, dragging }
 
     private(set) var position: CGPoint = .zero
     private(set) var velocity: CGVector = .zero
     /// 1 = facing right, -1 = facing left. Drives the art's horizontal flip.
     private(set) var facing: Double = 1
     private(set) var activity: Activity = .idle
+    /// True while airborne from a throw (used to show the dangling pose).
+    private(set) var wasThrown = false
 
     /// Set by the window controller to reposition the pet's panel.
     @ObservationIgnored var moveHandler: ((CGPoint) -> Void)?
@@ -28,11 +31,13 @@ final class PetMotion {
 
     @ObservationIgnored private var nextDecision = Date()
     @ObservationIgnored private var walkTarget: CGFloat = 0
+    @ObservationIgnored private var gaitSpeed: CGFloat = 85
     @ObservationIgnored private var wasCelebrating = false
 
     // Physics constants (points, points/s, points/s²).
     private let gravity: CGFloat = -2200
     private let walkSpeed: CGFloat = 85
+    private let runSpeed: CGFloat = 300
     private let restitution: CGFloat = 0.42
     private let hopSpeed: CGFloat = 700
 
@@ -58,10 +63,19 @@ final class PetMotion {
         tickTask?.cancel()
     }
 
+    #if DEBUG
+        /// Snapshot-mode hook so each pose can be rendered without simulating.
+        func debugSet(activity newActivity: Activity, facing newFacing: Double = 1) {
+            activity = newActivity
+            facing = newFacing
+        }
+    #endif
+
     // MARK: - Drag input (from DraggablePetView)
 
     func dragBegan() {
         activity = .dragging
+        wasThrown = false
         velocity = .zero
     }
 
@@ -75,13 +89,17 @@ final class PetMotion {
 
     func dragEnded(velocity newVelocity: CGVector) {
         velocity = newVelocity
+        wasThrown = true
         activity = .falling
     }
 
     /// A click (no drag) — the user patted the pet.
     func tap() {
         engine.pat()
-        if isGrounded { velocity.dy = hopSpeed * 0.5; activity = .falling }
+        if isGrounded {
+            velocity.dy = hopSpeed * 0.5
+            activity = .falling
+        }
     }
 
     // MARK: - Simulation
@@ -112,6 +130,7 @@ final class PetMotion {
         let celebrating = engine.state == .celebrating
         if celebrating, !wasCelebrating, isGrounded {
             velocity.dy = hopSpeed
+            wasThrown = false
             activity = .falling
         }
         wasCelebrating = celebrating
@@ -123,10 +142,10 @@ final class PetMotion {
             break // position comes from drag callbacks
         case .falling:
             stepPhysics(dt)
-        case .walking:
-            if sleeping { activity = .idle } else { stepWalk(dt) }
-        case .idle:
-            if !sleeping { wander(now) }
+        case .walking, .running:
+            if sleeping { activity = .idle } else { stepGait(dt) }
+        case .idle, .sitting:
+            if !sleeping { decideNextMove(now) }
         }
 
         emitIfMoved()
@@ -148,37 +167,76 @@ final class PetMotion {
                 velocity.dx *= 0.6
             } else {
                 velocity = .zero
+                wasThrown = false
                 activity = .idle
-                nextDecision = Date().addingTimeInterval(Double.random(in: 0.6 ... 2.0))
+                nextDecision = Date().addingTimeInterval(Double.random(in: 0.5 ... 1.5))
             }
         }
         if abs(velocity.dx) > 4 { facing = velocity.dx >= 0 ? 1 : -1 }
         position = next
     }
 
-    private func stepWalk(_ dt: TimeInterval) {
+    private func stepGait(_ dt: TimeInterval) {
         let direction: CGFloat = walkTarget >= position.x ? 1 : -1
         facing = direction
         var next = position
-        next.x += direction * walkSpeed * CGFloat(dt)
+        next.x += direction * gaitSpeed * CGFloat(dt)
         next.y = floorY
         let reached = (direction > 0 && next.x >= walkTarget) || (direction < 0 && next.x <= walkTarget)
         if reached {
             next.x = walkTarget
-            activity = .idle
-            nextDecision = Date().addingTimeInterval(Double.random(in: 1.5 ... 4.5))
+            // Often plop down into a sit after arriving somewhere.
+            if Double.random(in: 0 ... 1) < 0.55 {
+                activity = .sitting
+                nextDecision = Date().addingTimeInterval(Double.random(in: 4 ... 9))
+            } else {
+                activity = .idle
+                nextDecision = Date().addingTimeInterval(Double.random(in: 1 ... 2.5))
+            }
         }
         position = CGPoint(x: min(max(next.x, minX), maxX), y: next.y)
     }
 
-    private func wander(_ now: Date) {
-        if position.y > floorY + 0.5 { activity = .falling; return } // settle to ground
+    private func decideNextMove(_ now: Date) {
+        if position.y > floorY + 0.5 {
+            activity = .falling // settle to ground
+            return
+        }
         guard now >= nextDecision else { return }
-        if Double.random(in: 0 ... 1) < 0.6 {
-            walkTarget = CGFloat.random(in: minX ... max(minX, maxX))
-            activity = .walking
+
+        let roll = Double.random(in: 0 ... 1)
+        if activity == .sitting {
+            // Stand up: usually go somewhere, sometimes just stand a moment.
+            if roll < 0.75 { startGait(run: roll < 0.12) } else {
+                activity = .idle
+                nextDecision = now.addingTimeInterval(Double.random(in: 0.8 ... 2))
+            }
+        } else if roll < 0.40 {
+            startGait(run: false)
+        } else if roll < 0.52 {
+            startGait(run: true) // zoomies!
+        } else if roll < 0.85 {
+            activity = .sitting
+            nextDecision = now.addingTimeInterval(Double.random(in: 4 ... 9))
         } else {
-            nextDecision = now.addingTimeInterval(Double.random(in: 2 ... 5))
+            nextDecision = now.addingTimeInterval(Double.random(in: 1 ... 2.5))
+        }
+    }
+
+    private func startGait(run: Bool) {
+        let span = maxX - minX
+        if run {
+            // Dash to somewhere far across the screen.
+            let target = position.x < minX + span / 2
+                ? CGFloat.random(in: minX + span * 0.6 ... maxX)
+                : CGFloat.random(in: minX ... minX + span * 0.4)
+            walkTarget = target
+            gaitSpeed = runSpeed
+            activity = .running
+        } else {
+            walkTarget = CGFloat.random(in: minX ... max(minX, maxX))
+            gaitSpeed = walkSpeed
+            activity = .walking
         }
     }
 

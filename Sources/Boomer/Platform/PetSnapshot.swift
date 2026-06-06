@@ -13,19 +13,30 @@
             let folder = URL(fileURLWithPath: dir)
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 
-            let combos: [(name: String, species: PetSpecies, setup: (PetEngine) -> Void)] = [
-                ("dog-idle", .dog, { _ in }),
-                ("dog-happy", .dog, { $0.pat() }),
-                ("dog-eat", .dog, { $0.feed() }),
-                ("dog-sleep", .dog, { $0.toggleSleep() }),
-                ("cat-idle", .cat, { _ in }),
-                ("cat-happy", .cat, { $0.pat() }),
-            ]
+            let combos: [
+                (name: String, species: PetSpecies, setup: (PetEngine) -> Void, activity: PetMotion.Activity)
+            ] =
+                [
+                    ("dog-sit", .dog, { _ in }, .sitting),
+                    ("dog-walk", .dog, { _ in }, .walking),
+                    ("dog-run", .dog, { _ in }, .running),
+                    ("dog-happy", .dog, { $0.pat() }, .sitting),
+                    ("dog-eat", .dog, { $0.feed() }, .sitting),
+                    ("dog-sleep", .dog, { $0.toggleSleep() }, .idle),
+                    ("dog-drag", .dog, { _ in }, .dragging),
+                    ("cat-sit", .cat, { _ in }, .sitting),
+                    ("cat-walk", .cat, { _ in }, .walking),
+                    ("cat-run", .cat, { _ in }, .running),
+                    ("cat-happy", .cat, { $0.pat() }, .sitting),
+                    ("cat-sleep", .cat, { $0.toggleSleep() }, .idle),
+                    ("cat-drag", .cat, { _ in }, .dragging),
+                ]
 
             for combo in combos {
                 let engine = PetEngine(pet: Pet(species: combo.species))
                 combo.setup(engine)
                 let motion = PetMotion(engine: engine, size: CGSize(width: 200, height: 220))
+                motion.debugSet(activity: combo.activity)
                 let view = ZStack {
                     RoundedRectangle(cornerRadius: 18).fill(Color(white: 0.93))
                     PetView(engine: engine, motion: motion)
