@@ -15,7 +15,9 @@ final class PermissionsManager {
 
     /// Accessibility is required for window tracking (sit on Terminal) and for the
     /// global keyboard activity monitor used by the typing animation.
-    var hasAccessibility: Bool { AXIsProcessTrusted() }
+    var hasAccessibility: Bool {
+        AXIsProcessTrusted()
+    }
 
     /// Prompts for Accessibility, opening System Settings if not yet granted.
     func requestAccessibility() {

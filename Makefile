@@ -44,6 +44,14 @@ run: build
 test:
 	xcodebuild test -scheme $(SCHEME) -configuration $(CONFIG) -destination '$(DEST)'
 
+# Render the pet in each state to PNGs (no Screen Recording needed) for art review.
+snapshots: build
+	@APP=$$(xcodebuild -scheme $(SCHEME) -configuration $(CONFIG) -showBuildSettings 2>/dev/null \
+		| awk '/ BUILT_PRODUCTS_DIR /{d=$$3} END{print d"/Boomer.app"}'); \
+	rm -rf /tmp/boomshots && mkdir -p /tmp/boomshots; \
+	BOOMER_SNAPSHOT=/tmp/boomshots "$$APP/Contents/MacOS/Boomer"; \
+	echo "Wrote snapshots to /tmp/boomshots"; ls /tmp/boomshots
+
 lint:
 	swiftlint lint --quiet
 	swiftformat --lint .

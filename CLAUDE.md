@@ -21,7 +21,12 @@ make run         # build + launch the .app
 make test        # xcodebuild test -scheme Boomer -destination 'platform=macOS'
 make lint        # swiftlint + swiftformat --lint
 make format      # swiftformat .
+make snapshots   # render the pet in each state to /tmp/boomshots (no Screen Recording needed)
 ```
+
+`make snapshots` runs a DEBUG-only mode (`PetSnapshot`, triggered by the
+`BOOMER_SNAPSHOT=<dir>` env var) that uses `ImageRenderer` to write PNGs of the
+pet in each state — the way to review art changes when Screen Recording is unavailable.
 
 Run a single test:
 ```bash
@@ -34,8 +39,10 @@ xcodebuild test -scheme Boomer -destination 'platform=macOS' \
 **Logic vs. visuals split:** the Swift `PetStateMachine` owns behavior; **Rive** owns the visual transitions. State changes set Rive state-machine *inputs* — never drive frames manually.
 
 - **`BoomerApp`** — SwiftUI `@main`, an agent app (`LSUIElement`, no Dock icon). The pet has no normal window; `AppDelegate` owns the `PetEngine` and the floating pet window, and `MenuBarExtra` provides controls.
-- **`PetWindowController`** — a borderless, transparent, non-activating `NSPanel` hosting `RivePetView`. Configured `canJoinAllSpaces + fullScreenAuxiliary + stationary` at `.statusBar` level so the pet floats over everything on all Spaces. Empty regions are click-through; the pet sprite is interactive (drag + physics arrive in Phase 1).
-- **`PetEngine`** (`@Observable`, `@MainActor`) — the brain. Holds `Needs`/`Mood` (hunger/happiness/energy with a 30s decay loop), runs `PetStateMachine`, and drains the `EventBus`.
+- **`PetWindowController`** — a borderless, transparent, non-activating `NSPanel` hosting `PetView`. Configured `canJoinAllSpaces + fullScreenAuxiliary + stationary` at `.statusBar` level so the pet floats over everything on all Spaces. Mouse interaction is handled by `DraggablePetView` (AppKit, global mouse location) so window drags are smooth and throw velocity can be measured; a click without movement is a "pat".
+- **`PetMotion`** (`@Observable`, `@MainActor`) — locomotion/physics: autonomous wandering, gravity, and grab-and-throw. Moves the panel via a `moveHandler` closure and reads `PetEngine.state` (it never owns expression). All coordinates are AppKit screen points (y-up).
+- **`PetView`** — the pet's body, hand-drawn from SwiftUI shapes (dog = Boomer, cat = Buttons), animated by `TimelineView` and modulated by `PetEngine.state` (expression) + `PetMotion` (facing/gait). This is the renderer seam: swap it for a Rive-backed view later without touching engine/motion.
+- **`PetEngine`** (`@Observable`, `@MainActor`) — the brain. Holds `Needs`/`Mood` (hunger/happiness/energy with a 30s decay loop), runs `PetStateMachine`, and drains the `EventBus`. Expressive states (`eating`/`playing`/`celebrating`) are transient and auto-return to `.idle`.
 - **`EventBus`** (`AsyncStream<PetEvent>`) — monitors publish, the engine consumes. Monitors are isolated services/actors (Phase 3):
   - `DownloadMonitor` (FSEvents on `~/Downloads`), `AppInstallMonitor` (`/Applications`), `IdleMonitor` (idle/night → sleep), `FocusMonitor` (`NSWorkspace` frontmost app).
   - `TypingMonitor` — detects typing **activity only** (a boolean rate). **Never log, store, or transmit keystrokes.**
@@ -55,4 +62,7 @@ xcodebuild test -scheme Boomer -destination 'platform=macOS' \
 
 ## Build status
 
-Phase 0 (scaffold) is in place: menu-bar agent, transparent pet panel with placeholder SF Symbol art, `PetEngine`/`PetStateMachine`/`Needs`, `EventBus`, and the `boomer://` deep-link entry point. Rive rendering, monitors, onboarding, productivity, and local AI land in later phases (see the plan in `.claude/plans/`).
+- **Phase 0 (scaffold):** menu-bar agent, transparent floating panel, `PetEngine`/`PetStateMachine`/`Needs`, `EventBus`, `boomer://` deep link.
+- **Phase 1 (live pet):** hand-drawn SwiftUI dog/cat art with per-state expressions, autonomous wandering + gravity + grab-and-throw physics (`PetMotion`), click-to-pat, menu controls (feed/play/nap/switch species). Real Rive `.riv` art can replace `PetView` later.
+
+Next up: Phase 2 (onboarding + multi-pet unlock), Phase 3 (system monitors: downloads/typing/coding-agent), Phase 4 (productivity), Phase 5 (local AI). See the plan in `.claude/plans/`.

@@ -9,6 +9,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var petWindow: PetWindowController?
 
     func applicationDidFinishLaunching(_: Notification) {
+        #if DEBUG
+            if PetSnapshot.runIfRequested() {
+                NSApp.terminate(nil)
+                return
+            }
+        #endif
         petWindow = PetWindowController(engine: engine)
         petWindow?.show()
         engine.start()

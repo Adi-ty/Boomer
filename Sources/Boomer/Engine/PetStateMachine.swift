@@ -2,7 +2,7 @@ import Foundation
 
 /// High-level pet states. Each maps to inputs on the Rive state machine (Phase 1).
 /// Keep this enum in sync with the inputs exposed by the `.riv` files.
-enum PetState: String, Sendable, Equatable {
+enum PetState: String, Equatable {
     case idle
     case walking
     case sleeping
@@ -17,7 +17,7 @@ enum PetState: String, Sendable, Equatable {
 
 /// Owns the *logic* of state transitions. Rive owns the *visuals*. This type is a
 /// pure value with no side effects, which makes it cheap to unit-test.
-struct PetStateMachine: Sendable {
+struct PetStateMachine {
     /// Decide the next state in response to an external event.
     func next(for event: PetEvent, current: PetState, needs _: Needs) -> PetState {
         switch event {

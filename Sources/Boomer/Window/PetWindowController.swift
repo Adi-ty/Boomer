@@ -2,20 +2,23 @@ import AppKit
 import SwiftUI
 
 /// Hosts the pet in a borderless, transparent, non-activating panel that floats
-/// over every Space (including full-screen apps). Empty regions are click-through;
-/// the pet sprite itself is interactive (drag + physics land in Phase 1).
+/// over every Space (including full-screen apps). The panel is moved around the
+/// screen by `PetMotion`; mouse interaction is handled by `DraggablePetView`.
 @MainActor
 final class PetWindowController {
+    static let size = NSSize(width: 200, height: 220)
+
     private let panel: NSPanel
     private let engine: PetEngine
-
-    static let defaultSize = NSSize(width: 200, height: 200)
+    private let motion: PetMotion
+    private let content: DraggablePetView
 
     init(engine: PetEngine) {
         self.engine = engine
+        motion = PetMotion(engine: engine, size: Self.size)
 
         panel = NSPanel(
-            contentRect: NSRect(origin: .zero, size: Self.defaultSize),
+            contentRect: NSRect(origin: .zero, size: Self.size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -28,26 +31,32 @@ final class PetWindowController {
         panel.isMovableByWindowBackground = false
         panel.hidesOnDeactivate = false
 
-        let host = NSHostingView(rootView: RivePetView(engine: engine))
+        content = DraggablePetView(frame: NSRect(origin: .zero, size: Self.size))
+        let host = NSHostingView(rootView: PetView(engine: engine, motion: motion))
+        host.frame = content.bounds
         host.autoresizingMask = [.width, .height]
-        if let content = panel.contentView {
-            host.frame = content.bounds
-            content.addSubview(host)
-        }
+        content.addSubview(host)
+        panel.contentView = content
+
+        motion.moveHandler = { [weak panel] origin in panel?.setFrameOrigin(origin) }
+        wireMouse()
     }
 
     func show() {
-        positionAtRestingSpot()
         panel.orderFrontRegardless()
+        motion.start(at: dropInSpot())
     }
 
-    /// Default resting spot: bottom-right of the main screen's visible area.
-    private func positionAtRestingSpot() {
-        guard let frame = NSScreen.main?.visibleFrame else { return }
-        let origin = NSPoint(
-            x: frame.maxX - Self.defaultSize.width - 24,
-            y: frame.minY + 24
-        )
-        panel.setFrameOrigin(origin)
+    /// Start a little above the floor near center, so the pet drops in on launch.
+    private func dropInSpot() -> CGPoint {
+        guard let frame = NSScreen.main?.visibleFrame else { return .zero }
+        return CGPoint(x: frame.midX - Self.size.width / 2, y: frame.minY + 180)
+    }
+
+    private func wireMouse() {
+        content.onDragBegan = { [weak motion] in motion?.dragBegan() }
+        content.onDragMoved = { [weak motion] origin, velocity in motion?.dragMoved(to: origin, velocity: velocity) }
+        content.onDragEnded = { [weak motion] velocity in motion?.dragEnded(velocity: velocity) }
+        content.onTap = { [weak motion] in motion?.tap() }
     }
 }

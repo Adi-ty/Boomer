@@ -2,7 +2,7 @@ import Foundation
 
 /// The two pets Boomer is modeled on: a dog named **Boomer** and a cat named
 /// **Buttons**. Onboarding picks one as primary; the other is unlockable.
-enum PetSpecies: String, CaseIterable, Codable, Sendable {
+enum PetSpecies: String, CaseIterable, Codable {
     case dog
     case cat
 

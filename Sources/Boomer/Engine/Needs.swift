@@ -1,19 +1,21 @@
 import Foundation
 
 /// The pet's overall disposition, derived from `Needs`.
-enum Mood: String, Sendable, CustomStringConvertible {
+enum Mood: String, CustomStringConvertible {
     case happy
     case content
     case bored
     case hungry
     case sleepy
 
-    var description: String { rawValue.capitalized }
+    var description: String {
+        rawValue.capitalized
+    }
 }
 
 /// Tamagotchi-style needs that decay over time and drive `Mood`.
 /// Each value is `0...1`, where `1` is fully satisfied.
-struct Needs: Sendable, Equatable {
+struct Needs: Equatable {
     var hunger: Double = 0.8
     var happiness: Double = 0.8
     var energy: Double = 0.8
@@ -33,14 +35,20 @@ struct Needs: Sendable, Equatable {
         energy = clamp(energy - 0.01)
     }
 
-    mutating func feed() { hunger = clamp(hunger + 0.4) }
+    mutating func feed() {
+        hunger = clamp(hunger + 0.4)
+    }
 
     mutating func play() {
         happiness = clamp(happiness + 0.4)
         energy = clamp(energy - 0.1)
     }
 
-    mutating func rest() { energy = clamp(energy + 0.5) }
+    mutating func rest() {
+        energy = clamp(energy + 0.5)
+    }
 
-    private func clamp(_ value: Double) -> Double { min(1, max(0, value)) }
+    private func clamp(_ value: Double) -> Double {
+        min(1, max(0, value))
+    }
 }

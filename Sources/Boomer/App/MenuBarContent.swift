@@ -1,22 +1,26 @@
 import SwiftUI
 
-/// Contents of the menu-bar dropdown. Kept intentionally small — most
-/// interaction happens by clicking/dragging the pet itself.
+/// Contents of the menu-bar dropdown. Most interaction happens by clicking and
+/// dragging the pet itself; this is for the things you can't do by poking it.
 struct MenuBarContent: View {
     @Environment(PetEngine.self) private var engine
 
     var body: some View {
-        Text("\(engine.pet.name) — \(engine.mood.description)")
+        Text("\(engine.pet.name) the \(engine.pet.species == .dog ? "dog" : "cat")")
             .font(.headline)
-
-        Button("Feed") { engine.feed() }
-        Button("Play") { engine.play() }
+        Text("Mood: \(engine.mood.description)")
 
         Divider()
 
-        // Placeholders for features landing in later phases.
-        Button("Notes…") {}.disabled(true)
-        Button("Settings…") {}.disabled(true)
+        Button("Feed") { engine.feed() }
+        Button("Play") { engine.play() }
+        Button(engine.state == .sleeping ? "Wake up" : "Take a nap") { engine.toggleSleep() }
+
+        Divider()
+
+        Button("Switch to \(engine.pet.species == .dog ? "Buttons (cat)" : "Boomer (dog)")") {
+            engine.switchSpecies()
+        }
 
         Divider()
 
