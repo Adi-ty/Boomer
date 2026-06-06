@@ -38,6 +38,7 @@ final class PetEngine {
     private var decayTask: Task<Void, Never>?
     private var eventTask: Task<Void, Never>?
     private var transientTask: Task<Void, Never>?
+    @ObservationIgnored private var lastCelebrationAt = Date.distantPast
 
     init(store: PetStore) {
         self.store = store
@@ -155,11 +156,22 @@ final class PetEngine {
     private func handle(_ event: PetEvent) {
         switch event {
         case .downloadCompleted, .installCompleted, .codingAgentCompleted:
+            // Unzipping an archive can spray a dozen files into ~/Downloads;
+            // one party every few seconds is plenty.
+            guard Date().timeIntervalSince(lastCelebrationAt) > 3 else { return }
+            lastCelebrationAt = Date()
             enterTransient(.celebrating, for: 2.0)
         default:
             request(stateMachine.next(for: event, current: state, needs: needs))
         }
     }
+
+    #if DEBUG
+        /// Snapshot-mode hook: pin an arbitrary expressive state.
+        func debugForce(state newState: PetState) {
+            request(newState)
+        }
+    #endif
 
     private func request(_ newState: PetState) {
         state = stateMachine.transition(from: state, to: newState)

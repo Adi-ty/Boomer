@@ -29,6 +29,7 @@
                     ("dog-happy", .dog, { $0.pat() }, .sitting),
                     ("dog-eat", .dog, { $0.feed() }, .sitting),
                     ("dog-sleep", .dog, { $0.toggleSleep() }, .idle),
+                    ("dog-typing", .dog, { $0.debugForce(state: .typing) }, .sitting),
                     ("dog-drag", .dog, { _ in }, .dragging),
                     ("cat-sit", .cat, { _ in }, .sitting),
                     ("cat-walk", .cat, { _ in }, .walking),

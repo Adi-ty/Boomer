@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let engine: PetEngine
     private var petWindow: PetWindowController?
     private var onboarding: OnboardingWindowController?
+    private var monitors: MonitorCoordinator?
 
     override init() {
         store = PetStore()
@@ -43,11 +44,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Handles `boomer://…` deep links (e.g. the Claude Code Stop-hook bridge).
-    /// Wired up fully in Phase 3; the scheme is already declared in Info.plist.
+    /// Handles `boomer://…` deep links (the Claude Code Stop-hook bridge).
+    /// The engine celebrates via the event bus; the window layer additionally
+    /// hops the pet onto the frontmost terminal when Accessibility allows.
     func application(_: NSApplication, open urls: [URL]) {
         for url in urls where url.scheme == "boomer" {
             engine.handleDeepLink(url)
+            if url.host == "event", url.lastPathComponent == "agent-done" {
+                petWindow?.celebrateAtFrontmostTerminal()
+            }
         }
     }
 
@@ -58,6 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         petWindow = PetWindowController(engine: engine)
         petWindow?.show()
         engine.start()
+        monitors = MonitorCoordinator(bus: engine.eventSink)
+        monitors?.start()
     }
 
     private func showOnboarding() {

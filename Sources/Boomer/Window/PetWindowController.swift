@@ -47,6 +47,18 @@ final class PetWindowController {
         motion.start(at: dropInSpot())
     }
 
+    /// A coding agent finished: hop onto the frontmost terminal window and
+    /// celebrate from its top edge (the engine's celebration runs in parallel
+    /// via the event bus). No-op without Accessibility or a terminal window.
+    func celebrateAtFrontmostTerminal() {
+        guard let frame = TerminalLocator.frontmostTerminalWindowFrame(),
+              let primary = NSScreen.screens.first else { return }
+        // AX coordinates are top-left-origin; convert the window's top edge
+        // to AppKit's bottom-left-origin space.
+        let landingY = primary.frame.height - frame.origin.y
+        motion.visit(centerX: frame.midX, landingY: landingY, for: 9)
+    }
+
     /// Start a little above the floor near center, so the pet drops in on launch.
     private func dropInSpot() -> CGPoint {
         guard let frame = NSScreen.main?.visibleFrame else { return .zero }

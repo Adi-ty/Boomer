@@ -11,6 +11,7 @@ struct FaceParams {
     var mouth: MouthKind = .tiny
     var tilt: Double = 0 // gentle head tilt, degrees
     var earTwitch = false
+    var lookDown = false // watching you type (pupils drop to the keyboard)
 }
 
 /// The pet's head: big anime eyes, species ears, muzzle, whiskers, blush.
@@ -195,7 +196,7 @@ struct PetHeadView: View {
             Ellipse()
                 .fill(Color(red: 0.10, green: 0.07, blue: 0.05))
                 .frame(width: size.width * 0.40, height: size.height * 0.50)
-                .offset(y: size.height * 0.04)
+                .offset(y: size.height * (face.lookDown ? 0.18 : 0.04))
             // glints
             Circle()
                 .fill(.white.opacity(0.95))

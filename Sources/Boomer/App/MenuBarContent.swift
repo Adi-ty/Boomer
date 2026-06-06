@@ -44,7 +44,38 @@ struct MenuBarContent: View {
 
         Divider()
 
+        superpowers
+
+        Divider()
+
         quitButton
+    }
+
+    /// Permission-gated features. Rows show a checkmark once granted; granting
+    /// Input Monitoring may require relaunching Boomer (macOS applies it then).
+    private var superpowers: some View {
+        Menu("Superpowers") {
+            let permissions = PermissionsManager.shared
+            Button {
+                permissions.requestAccessibility()
+            } label: {
+                Label("Sit on Terminal when agents finish (Accessibility)",
+                      systemImage: permissions.hasAccessibility ? "checkmark.circle.fill" : "circle")
+            }
+            .disabled(permissions.hasAccessibility)
+
+            Button {
+                permissions.requestInputMonitoring()
+            } label: {
+                Label("Keep you company while typing (Input Monitoring)",
+                      systemImage: permissions.hasInputMonitoring ? "checkmark.circle.fill" : "circle")
+            }
+            .disabled(permissions.hasInputMonitoring)
+
+            Divider()
+
+            Text("Boomer only ever sees activity and window positions — never what you type or what's on screen.")
+        }
     }
 
     private var quitButton: some View {

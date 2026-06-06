@@ -34,6 +34,10 @@ final class PetMotion {
     @ObservationIgnored private var gaitSpeed: CGFloat = 85
     @ObservationIgnored private var wasCelebrating = false
 
+    /// Temporary elevated "floor" (e.g. the top edge of a Terminal window).
+    @ObservationIgnored private var floorOverride: CGFloat?
+    @ObservationIgnored private var visitTask: Task<Void, Never>?
+
     // Physics constants (points, points/s, points/s²).
     private let gravity: CGFloat = -2200
     private let walkSpeed: CGFloat = 85
@@ -73,6 +77,7 @@ final class PetMotion {
     // MARK: - Drag input (from DraggablePetView)
 
     func dragBegan() {
+        endVisit() // grabbing the pet cancels any window perch
         activity = .dragging
         wasThrown = false
         velocity = .zero
@@ -101,10 +106,42 @@ final class PetMotion {
         }
     }
 
+    /// Drop in on a specific spot (e.g. the top edge of a Terminal window),
+    /// hang out there briefly, then head back to the desktop floor.
+    func visit(centerX: CGFloat, landingY: CGFloat, for seconds: TimeInterval) {
+        let maxLanding = (NSScreen.main?.visibleFrame.maxY ?? landingY) - size.height
+        let landing = min(landingY, maxLanding)
+        guard landing > screenFloor - 1 else { return }
+
+        floorOverride = landing
+        position = CGPoint(x: min(max(centerX - size.width / 2, minX), maxX), y: landing + 140)
+        velocity = .zero
+        wasThrown = false
+        activity = .falling
+        moveHandler?(position)
+        lastSent = position
+
+        visitTask?.cancel()
+        visitTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self, !Task.isCancelled else { return }
+            floorOverride = nil // next decision tick notices and glides home
+        }
+    }
+
+    private func endVisit() {
+        visitTask?.cancel()
+        floorOverride = nil
+    }
+
     // MARK: - Simulation
 
-    private var floorY: CGFloat {
+    private var screenFloor: CGFloat {
         NSScreen.main?.visibleFrame.minY ?? 0
+    }
+
+    private var floorY: CGFloat {
+        max(screenFloor, floorOverride ?? -.greatestFiniteMagnitude)
     }
 
     private var minX: CGFloat {
@@ -199,6 +236,12 @@ final class PetMotion {
     private func decideNextMove(_ now: Date) {
         if position.y > floorY + 0.5 {
             activity = .falling // settle to ground
+            return
+        }
+        if floorOverride != nil {
+            // Perched on a window: sit proudly, don't wander off the edge.
+            if activity != .sitting { activity = .sitting }
+            nextDecision = now.addingTimeInterval(1)
             return
         }
         guard now >= nextDecision else { return }

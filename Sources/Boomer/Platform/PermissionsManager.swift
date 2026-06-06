@@ -1,4 +1,6 @@
+import AppKit
 import ApplicationServices
+import CoreGraphics
 import Foundation
 
 /// Centralizes the runtime permission checks Boomer relies on. Features that need
@@ -13,18 +15,41 @@ final class PermissionsManager {
 
     private init() {}
 
-    /// Accessibility is required for window tracking (sit on Terminal) and for the
-    /// global keyboard activity monitor used by the typing animation.
+    // MARK: - Accessibility (window tracking: sit on Terminal)
+
     var hasAccessibility: Bool {
         AXIsProcessTrusted()
     }
 
-    /// Prompts for Accessibility, opening System Settings if not yet granted.
+    /// Prompts for Accessibility and opens System Settings (covers the case
+    /// where the prompt was previously dismissed and won't re-appear).
     func requestAccessibility() {
         // The imported C global `kAXTrustedCheckOptionPrompt` is a non-Sendable
         // mutable global, which Swift 6 strict concurrency rejects. Its documented
         // value is the string below, so we use that directly.
         let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
+        if !AXIsProcessTrustedWithOptions(options) {
+            openSettings(pane: "Privacy_Accessibility")
+        }
+    }
+
+    // MARK: - Input Monitoring (typing activity — never content)
+
+    var hasInputMonitoring: Bool {
+        CGPreflightListenEventAccess()
+    }
+
+    func requestInputMonitoring() {
+        if !CGRequestListenEventAccess() {
+            openSettings(pane: "Privacy_ListenEvent")
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func openSettings(pane: String) {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")
+        else { return }
+        NSWorkspace.shared.open(url)
     }
 }

@@ -354,6 +354,7 @@ private struct Anim {
         sleeping = state == .sleeping
         celebrating = state == .celebrating || state == .playing
         eating = state == .eating
+        let typing = state == .typing
         let happy = mood == .happy || celebrating
 
         if sleeping {
@@ -366,8 +367,8 @@ private struct Anim {
             pose = .running
         } else if activity == .walking {
             pose = .walking
-        } else if activity == .sitting {
-            pose = .sitting
+        } else if activity == .sitting || typing {
+            pose = .sitting // typing buddy settles in and watches you work
         } else {
             pose = .standing
         }
@@ -401,6 +402,7 @@ private struct Anim {
         }
         if pose == .sitting { faceParams.tilt = sin(t * 0.55) * 4 }
         faceParams.earTwitch = t.truncatingRemainder(dividingBy: 6.3) < 0.18
+        faceParams.lookDown = typing && !sleeping
         face = faceParams
     }
 }
