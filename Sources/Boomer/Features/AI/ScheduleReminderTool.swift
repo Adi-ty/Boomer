@@ -27,6 +27,10 @@ struct ScheduleReminderTool: Tool {
             return "No reminder scheduled — the title was empty."
         }
         await MainActor.run { schedule(title, minutes) }
-        return "Done. Reminder '\(title)' is scheduled for \(minutes) minutes from now."
+        return """
+        Reminder '\(title)' scheduled successfully; it will fire in \(minutes) minutes. \
+        Confirm to the user that you'll remind them about it in \(minutes) minutes — \
+        it is NOT time for it yet, so don't announce it as happening now.
+        """
     }
 }

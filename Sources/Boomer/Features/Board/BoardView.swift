@@ -64,13 +64,17 @@ private struct NotesTab: View {
                         }
                         .padding(.vertical, 2)
                         .contextMenu {
-                            Button("Delete", role: .destructive) { context.delete(note) }
+                            Button("Delete", role: .destructive) {
+                                context.delete(note)
+                                try? context.save()
+                            }
                         }
                     }
                     .onDelete { offsets in
                         for index in offsets {
                             context.delete(notes[index])
                         }
+                        try? context.save()
                     }
                 }
                 .scrollContentBackground(.hidden)
@@ -83,6 +87,7 @@ private struct NotesTab: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         context.insert(Note(text: text))
+        try? context.save() // autosave is unreliable for our manual container
         draft = ""
     }
 }
@@ -162,6 +167,7 @@ private struct RemindersTab: View {
         PermissionsManager.shared.requestNotificationsIfNeeded()
         let reminder = Reminder(title: title, dueDate: Date().addingTimeInterval(Double(minutes) * 60))
         context.insert(reminder)
+        try? context.save()
         ReminderScheduler.schedule(title: title, at: reminder.dueDate, id: reminder.notificationID)
         draft = ""
     }
@@ -169,5 +175,6 @@ private struct RemindersTab: View {
     private func remove(_ reminder: Reminder) {
         ReminderScheduler.cancel(id: reminder.notificationID)
         context.delete(reminder)
+        try? context.save()
     }
 }

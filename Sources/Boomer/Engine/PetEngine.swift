@@ -141,10 +141,10 @@ final class PetEngine {
         enterTransient(.celebrating, for: 2.5)
     }
 
-    /// A reminder came due — the pet delivers it.
+    /// A reminder came due — the pet delivers it (long bubble, hard to miss).
     func deliverReminder(_ title: String) {
-        announce(title, for: 10)
-        enterTransient(.celebrating, for: 2.0)
+        announce("⏰ \(title)", for: 25)
+        enterTransient(.celebrating, for: 2.5)
     }
 
     /// Focus session: nap quietly until the break.

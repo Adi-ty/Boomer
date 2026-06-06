@@ -111,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PermissionsManager.shared.requestNotificationsIfNeeded()
         let reminder = Reminder(title: title, dueDate: Date().addingTimeInterval(Double(minutes) * 60))
         persistence?.context.insert(reminder)
+        try? persistence?.context.save() // autosave is unreliable for our manual container
         ReminderScheduler.schedule(title: title, at: reminder.dueDate, id: reminder.notificationID)
     }
 
@@ -129,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let descriptor = FetchDescriptor<Reminder>(predicate: #Predicate { $0.notificationID == id })
         guard let match = try? context.fetch(descriptor).first, !match.isDelivered else { return }
         match.isDelivered = true
+        try? context.save()
         engine.deliverReminder(body)
     }
 
@@ -156,11 +158,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             predicate: #Predicate { !$0.isDelivered && $0.dueDate <= now }
         )
         guard let due = try? context.fetch(descriptor), !due.isEmpty else { return }
+        if engine.isPetHidden { showPetAgain() } // come out to say it in person
         for reminder in due {
             reminder.isDelivered = true
             engine.deliverReminder(reminder.title)
         }
+        try? context.save()
     }
+
+    #if DEBUG
+        /// `boomer://debug/test-reminder?seconds=40` — exercises the REAL
+        /// reminder pipeline (insert → save → sweep → in-person delivery) so the
+        /// whole chain can be verified end-to-end without clicking through UI.
+        private func handleDebugDeepLink(_ url: URL) {
+            guard url.lastPathComponent == "test-reminder" else { return }
+            let seconds = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "seconds" }?.value
+                .flatMap(Double.init) ?? 30
+            let reminder = Reminder(title: "Test reminder 🧪",
+                                    dueDate: Date().addingTimeInterval(seconds))
+            persistence?.context.insert(reminder)
+            try? persistence?.context.save()
+        }
+    #endif
 
     // MARK: - Temporary hide
 
@@ -199,6 +219,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 lastAgentVisit = Date()
                 petWindow?.celebrateAtFrontmostTerminal()
             }
+            #if DEBUG
+                if url.host == "debug" { handleDebugDeepLink(url) }
+            #endif
         }
     }
 
