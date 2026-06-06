@@ -147,6 +147,16 @@ final class PetEngine {
         if state == .sleeping { request(.idle) }
     }
 
+    /// The on-device model is generating — the pet visibly "thinks".
+    func beginThinking() {
+        cancelTransient()
+        request(.thinking)
+    }
+
+    func endThinking() {
+        if state == .thinking { request(.idle) }
+    }
+
     /// Bookkeeping for the menu while the AppDelegate hides/shows the panel.
     func setPetHidden(_ hidden: Bool) {
         isPetHidden = hidden

@@ -37,6 +37,14 @@ struct MenuBarContent: View {
             NotificationCenter.default.post(name: .boomerShowBoard, object: nil)
         }
 
+        Button("Chat with \(engine.pet.name)…") {
+            NotificationCenter.default.post(name: .boomerShowChat, object: nil)
+        }
+
+        Button("Summarize clipboard") {
+            NotificationCenter.default.post(name: .boomerSummarizeClipboard, object: nil)
+        }
+
         if focus.isActive {
             Text("Focusing — \(focus.remainingDescription)")
             Button("End focus early") { focus.cancel() }

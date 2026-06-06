@@ -11,6 +11,9 @@ extension Notification.Name {
     static let boomerShowPet = Notification.Name("boomerShowPet")
     /// Posted from the menu to open the notes/reminders board.
     static let boomerShowBoard = Notification.Name("boomerShowBoard")
+    /// Posted from the menu to open the chat window / summarize the clipboard.
+    static let boomerShowChat = Notification.Name("boomerShowChat")
+    static let boomerSummarizeClipboard = Notification.Name("boomerSummarizeClipboard")
 }
 
 /// Owns the long-lived objects: the persistence store, the pet "brain"
@@ -26,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboarding: OnboardingWindowController?
     private var monitors: MonitorCoordinator?
     private var board: BoardWindowController?
+    private var ai: AIService?
+    private var chat: ChatWindowController?
 
     override init() {
         store = PetStore()
@@ -69,8 +74,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.showBoard() }
         }
+        NotificationCenter.default.addObserver(
+            forName: .boomerShowChat, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.showChat() }
+        }
+        NotificationCenter.default.addObserver(
+            forName: .boomerSummarizeClipboard, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.showChat()
+                self?.ai?.summarizeClipboard()
+            }
+        }
 
         UNUserNotificationCenter.current().delegate = self
+    }
+
+    private func showChat() {
+        if ai == nil {
+            ai = AIService(engine: engine) { [weak self] title, minutes in
+                self?.scheduleReminderFromAI(title: title, minutes: minutes)
+            }
+        }
+        guard let ai else { return }
+        if chat == nil {
+            chat = ChatWindowController(ai: ai, engine: engine)
+        }
+        chat?.show()
+    }
+
+    /// The model's `scheduleReminder` tool landed here: create the real thing.
+    private func scheduleReminderFromAI(title: String, minutes: Int) {
+        PermissionsManager.shared.requestNotificationsIfNeeded()
+        let reminder = Reminder(title: title, dueDate: Date().addingTimeInterval(Double(minutes) * 60))
+        persistence?.context.insert(reminder)
+        ReminderScheduler.schedule(title: title, at: reminder.dueDate, id: reminder.notificationID)
     }
 
     private func showBoard() {

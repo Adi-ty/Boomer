@@ -17,7 +17,20 @@
             renderOnboarding(into: folder)
             renderBoard(into: folder)
             renderBubble(into: folder)
+            renderChat(into: folder)
             return true
+        }
+
+        private static func renderChat(into folder: URL) {
+            let engine = PetEngine.preview(species: .dog)
+            let ai = AIService(engine: engine) { _, _ in }
+            ai.debugSeed([
+                ChatMessage(role: .pet, text: "Woof! What are we doing today?"),
+                ChatMessage(role: .user, text: "Remind me to stretch in 20 minutes"),
+                ChatMessage(role: .pet, text: "Done! I'll bark at you in 20 minutes. *tail wag*"),
+            ])
+            write(ChatView(ai: ai, engine: engine),
+                  size: CGSize(width: 380, height: 500), to: folder, name: "chat")
         }
 
         private static func renderBoard(into folder: URL) {

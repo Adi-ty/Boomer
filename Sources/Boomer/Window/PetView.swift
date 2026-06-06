@@ -308,6 +308,24 @@ struct PetView: View {
         if anim.eating {
             snack(anim, palette).offset(x: anim.facing * 40, y: 34)
         }
+        if anim.thinking {
+            thinkingDots(anim).offset(x: 44, y: -78)
+        }
+    }
+
+    /// iMessage-style typing indicator while the on-device model generates.
+    private func thinkingDots(_ anim: Anim) -> some View {
+        HStack(spacing: 5) {
+            ForEach(0 ..< 3, id: \.self) { index in
+                Circle()
+                    .fill(Color(white: 0.55))
+                    .frame(width: 7, height: 7)
+                    .scaleEffect(0.65 + 0.35 * (0.5 + 0.5 * sin(anim.dotPhase + Double(index) * 0.9)))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Capsule().fill(.white).shadow(color: .black.opacity(0.15), radius: 3, y: 1))
     }
 
     @ViewBuilder
@@ -344,6 +362,8 @@ private struct Anim {
     let sleeping: Bool
     let celebrating: Bool
     let eating: Bool
+    var thinking = false
+    var dotPhase: Double = 0
 
     @MainActor
     init(engine: PetEngine, motion: PetMotion, time t: TimeInterval) {
@@ -354,6 +374,8 @@ private struct Anim {
         sleeping = state == .sleeping
         celebrating = state == .celebrating || state == .playing
         eating = state == .eating
+        thinking = state == .thinking
+        dotPhase = t * 5
         let typing = state == .typing
         let happy = mood == .happy || celebrating
 
@@ -367,8 +389,8 @@ private struct Anim {
             pose = .running
         } else if activity == .walking {
             pose = .walking
-        } else if activity == .sitting || typing {
-            pose = .sitting // typing buddy settles in and watches you work
+        } else if activity == .sitting || typing || thinking {
+            pose = .sitting // typing buddy / deep thought: settle in
         } else {
             pose = .standing
         }
