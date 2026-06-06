@@ -123,13 +123,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// A scheduled notification fired while we're running: the pet delivers it
-    /// in person too, and the reminder record is marked delivered.
+    /// in person too (unless the sweep already did) and the record is marked.
     private func notificationFired(id: String, body: String) {
-        engine.deliverReminder(body)
         guard let context = persistence?.context else { return }
         let descriptor = FetchDescriptor<Reminder>(predicate: #Predicate { $0.notificationID == id })
-        if let match = try? context.fetch(descriptor).first {
-            match.isDelivered = true
+        guard let match = try? context.fetch(descriptor).first, !match.isDelivered else { return }
+        match.isDelivered = true
+        engine.deliverReminder(body)
+    }
+
+    // MARK: - In-person reminder delivery
+
+    private var reminderSweep: Task<Void, Never>?
+
+    /// The pet itself is the primary reminder channel: system notifications
+    /// silently no-op when permission was never granted, but the app is always
+    /// running — so sweep for due reminders and have the pet deliver them.
+    private func startReminderSweep() {
+        reminderSweep?.cancel()
+        reminderSweep = Task { [weak self] in
+            while !Task.isCancelled {
+                self?.deliverDueReminders()
+                try? await Task.sleep(for: .seconds(20))
+            }
+        }
+    }
+
+    private func deliverDueReminders() {
+        guard let context = persistence?.context else { return }
+        let now = Date()
+        let descriptor = FetchDescriptor<Reminder>(
+            predicate: #Predicate { !$0.isDelivered && $0.dueDate <= now }
+        )
+        guard let due = try? context.fetch(descriptor), !due.isEmpty else { return }
+        for reminder in due {
+            reminder.isDelivered = true
+            engine.deliverReminder(reminder.title)
         }
     }
 
@@ -182,6 +211,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         engine.start()
         monitors = MonitorCoordinator(bus: engine.eventSink)
         monitors?.start()
+        startReminderSweep()
     }
 
     private func showOnboarding() {

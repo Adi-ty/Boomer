@@ -75,22 +75,23 @@ the same bridge — just open `boomer://event/agent-done?agent=<name>` when done
 ```
 Config/            Info.plist, entitlements (outside Sources so they aren't copied as resources)
 Sources/Boomer/
-  App/             @main app, AppDelegate, menu bar
-  Window/          floating pet panel + pet view
+  App/             @main app, AppDelegate, menu bar, design tokens
+  Window/          floating pet panel, hand-drawn pet art, physics, speech bubble
   Engine/          PetEngine (brain), state machine, needs/mood
-  Events/          EventBus + event types (monitors land in Phase 3)
+  Events/          EventBus + system monitors (downloads/installs/typing/idle)
   Pets/            PetSpecies (dog/cat), Pet model
-  Platform/        permissions (+ persistence, AI in later phases)
-  Features/        Notes / Reminders / AI (later phases)
-  Onboarding/      first-run flow (later phase)
+  Platform/        persistence, permissions, sounds, login item, snapshots
+  Features/        notes & reminders board, focus timer, on-device AI chat
+  Onboarding/      first-run flow
 Tests/BoomerTests/ unit tests for pure logic
-scripts/           Claude Code Stop-hook example
+scripts/           Claude Code hook, opencode plugin, icon generator
 ```
 
-See `CLAUDE.md` for architecture details and the phased roadmap in `.claude/plans/`.
+See `CLAUDE.md` for architecture details.
 
 ## Status
 
-Phase 0 (scaffold) complete: menu-bar agent + transparent pet panel with
-placeholder art, the behavior engine, the event bus, and the `boomer://` bridge.
-Rive art, system monitors, onboarding, productivity, and AI follow in later phases.
+Feature-complete: living hand-drawn pet, onboarding + second-pet adoption,
+smart reactions (downloads, installs, typing, idle, coding agents), notes and
+pet-delivered reminders, focus sessions, on-device AI chat, sound effects,
+launch at login. Distributed as source — clone and build.

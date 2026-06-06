@@ -2,11 +2,16 @@ disabled_rules:
   - trailing_comma
   - todo
 
+# sorted_imports intentionally omitted: it conflicts with swiftformat's
+# --importgrouping testable-bottom in test files.
 opt_in_rules:
   - empty_count
   - first_where
-  - sorted_imports
   - redundant_nil_coalescing
+
+type_name:
+  excluded:
+    - DS # design-token namespace, deliberately terse
 
 excluded:
   - .build
