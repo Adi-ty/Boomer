@@ -36,7 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store = PetStore()
         engine = PetEngine(store: store)
         focus = FocusTimer(engine: engine)
-        persistence = try? PersistenceService()
+        persistence = PersistenceService.resilient()
         super.init()
     }
 

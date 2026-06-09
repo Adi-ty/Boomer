@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import Observation
 
 /// Drives where the pet *is* on screen: autonomous wandering (walk, sit, the
@@ -147,8 +148,28 @@ final class PetMotion {
 
     // MARK: - Simulation
 
+    /// The screen the pet is currently on, so the floor and roaming bounds
+    /// follow it across displays instead of always using the main screen.
+    private var currentScreen: NSScreen? {
+        let probe = CGPoint(x: position.x + size.width / 2, y: position.y + 24)
+        return NSScreen.screens.first { $0.frame.contains(probe) }
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
+    }
+
+    /// The rectangle the pet may roam in. Normally this excludes the Dock and
+    /// menu bar (`visibleFrame`); but on a full-screen Space those are hidden,
+    /// so `visibleFrame` would still reserve their footprint and leave the pet
+    /// resting in mid-air. Use the whole screen frame then.
+    private var roamBounds: CGRect {
+        guard let screen = currentScreen else {
+            return CGRect(origin: .zero, size: size)
+        }
+        return screenChromeHidden ? screen.frame : screen.visibleFrame
+    }
+
     private var screenFloor: CGFloat {
-        NSScreen.main?.visibleFrame.minY ?? 0
+        roamBounds.minY
     }
 
     private var floorY: CGFloat {
@@ -156,15 +177,57 @@ final class PetMotion {
     }
 
     private var minX: CGFloat {
-        NSScreen.main?.visibleFrame.minX ?? 0
+        roamBounds.minX
     }
 
     private var maxX: CGFloat {
-        (NSScreen.main?.visibleFrame.maxX ?? size.width) - size.width
+        roamBounds.maxX - size.width
     }
 
     private var isGrounded: Bool {
         position.y <= floorY + 0.5 && abs(velocity.dy) < 1
+    }
+
+    // MARK: Full-screen detection
+
+    @ObservationIgnored private var chromeHiddenCache = false
+    @ObservationIgnored private var chromeCheckedAt = Date.distantPast
+
+    /// True when a full-screen app covers the pet's screen (Dock + menu bar
+    /// hidden). Sampled a few times a second — `CGWindowList` is cheap but not
+    /// worth running on every 60 Hz frame.
+    private var screenChromeHidden: Bool {
+        let now = Date()
+        if now.timeIntervalSince(chromeCheckedAt) > 0.4 {
+            chromeCheckedAt = now
+            chromeHiddenCache = fullScreenAppCoversScreen()
+        }
+        return chromeHiddenCache
+    }
+
+    /// Looks for a normal-layer window covering the pet's whole screen, including
+    /// the menu-bar strip — the signature of macOS full-screen mode, as opposed
+    /// to a merely maximized window (which stops at `visibleFrame`). Uses only
+    /// window bounds + layer, so it needs no Screen Recording permission.
+    private func fullScreenAppCoversScreen() -> Bool {
+        guard let frame = currentScreen?.frame else { return false }
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        guard let windows = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+        for window in windows {
+            guard let layer = window["kCGWindowLayer"] as? Int, layer == 0,
+                  let boundsDict = window["kCGWindowBounds"] as? NSDictionary,
+                  let rect = CGRect(dictionaryRepresentation: boundsDict as CFDictionary)
+            else { continue }
+            if rect.width >= frame.width - 1,
+               rect.height >= frame.height - 1,
+               abs(rect.minX - frame.minX) < 2
+            {
+                return true
+            }
+        }
+        return false
     }
 
     private func tick() {
@@ -192,6 +255,7 @@ final class PetMotion {
         case .walking, .running:
             if sleeping { activity = .idle } else { stepGait(dt) }
         case .idle, .sitting:
+            if reconcileFloor() { break }
             if !sleeping { decideNextMove(now) }
         }
 
@@ -244,11 +308,23 @@ final class PetMotion {
         position = CGPoint(x: min(max(next.x, minX), maxX), y: next.y)
     }
 
-    private func decideNextMove(_ now: Date) {
+    /// Keep a grounded pet glued to the (possibly just-changed) floor: drop to
+    /// it if we're above it, snap up if the Dock/menu bar just reappeared
+    /// beneath us (e.g. on leaving a full-screen app). Returns true if it
+    /// adjusted, so the caller skips decision-making this tick.
+    private func reconcileFloor() -> Bool {
         if position.y > floorY + 0.5 {
-            activity = .falling // settle to ground
-            return
+            activity = .falling
+            return true
         }
+        if position.y < floorY - 0.5 {
+            position = CGPoint(x: position.x, y: floorY)
+            return true
+        }
+        return false
+    }
+
+    private func decideNextMove(_ now: Date) {
         if floorOverride != nil {
             // Perched on a window: sit proudly, don't wander off the edge.
             if activity != .sitting { activity = .sitting }

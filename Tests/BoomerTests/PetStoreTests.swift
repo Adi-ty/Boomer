@@ -24,33 +24,33 @@ struct PetStoreTests {
         #expect(reloaded.state.unlocked == ["cat"])
     }
 
-    @Test func careUnlocksSecondPet() {
+    @Test func patAccruesCarePoints() {
         let store = PetStore(defaults: freshDefaults())
         store.completeOnboarding(species: .dog, name: "Boomer")
         let engine = PetEngine(store: store)
 
-        #expect(!engine.isUnlocked(.cat))
-        for _ in 0 ..< PetEngine.unlockThreshold {
+        for _ in 0 ..< 5 {
             engine.pat()
         }
-        #expect(engine.isUnlocked(.cat))
-        #expect(engine.state == .celebrating) // adoption-day celebration
+        #expect(engine.carePoints == 5)
     }
 
-    @Test func switchIsGatedUntilUnlock() {
+    @Test func canSwitchSpeciesAnytime() {
         let store = PetStore(defaults: freshDefaults())
         store.completeOnboarding(species: .dog, name: "Boomer")
         let engine = PetEngine(store: store)
 
-        engine.switchTo(.cat)
-        #expect(engine.pet.species == .dog) // still locked
-
-        for _ in 0 ..< PetEngine.unlockThreshold {
-            engine.pat()
-        }
+        // No unlock grind required — switching works immediately and adopts the
+        // species, so its name is remembered from then on.
         engine.switchTo(.cat)
         #expect(engine.pet.species == .cat)
         #expect(engine.pet.name == "Buttons")
+        #expect(engine.isUnlocked(.cat))
+
+        // And back again.
+        engine.switchTo(.dog)
+        #expect(engine.pet.species == .dog)
+        #expect(engine.pet.name == "Boomer")
     }
 
     @Test func decodingStateWithoutNewerFieldsKeepsData() throws {

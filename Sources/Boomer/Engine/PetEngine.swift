@@ -12,9 +12,6 @@ import Observation
 @MainActor
 @Observable
 final class PetEngine {
-    /// Feeds/plays/pats needed before the second pet can be adopted.
-    static let unlockThreshold = 10
-
     private(set) var pet: Pet
     private(set) var state: PetState = .idle
     private(set) var needs: Needs
@@ -190,9 +187,15 @@ final class PetEngine {
         save()
     }
 
-    /// Switch to an already-adopted pet.
+    /// Switch to the other species. Both are always available; the first time
+    /// you pick a species it's adopted (its name is remembered from then on).
     func switchTo(_ species: PetSpecies) {
-        guard isUnlocked(species), species != pet.species else { return }
+        guard species != pet.species else { return }
+        if !isUnlocked(species) {
+            var next = store.state
+            next.unlocked.append(species.rawValue)
+            store.state = next
+        }
         pet = Pet(species: species, name: name(for: species))
         cancelTransient()
         request(.idle)
@@ -200,13 +203,9 @@ final class PetEngine {
     }
 
     private func registerCare() {
+        // A lifetime stat only. Both species are freely switchable, so caring
+        // for the pet no longer gates anything.
         carePoints += 1
-        if carePoints >= Self.unlockThreshold, !isUnlocked(otherSpecies) {
-            var next = store.state
-            next.unlocked.append(otherSpecies.rawValue)
-            store.state = next
-            enterTransient(.celebrating, for: 2.5) // adoption-day celebration
-        }
         save()
     }
 

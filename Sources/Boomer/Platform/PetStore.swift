@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 /// Everything Boomer remembers between launches. The data is tiny (one pet
 /// family), so it lives as Codable JSON in UserDefaults; SwiftData arrives with
@@ -41,6 +42,7 @@ struct PersistedState: Codable, Equatable {
 }
 
 @MainActor
+@Observable
 final class PetStore {
     static let storageKey = "boomer.state.v1"
 

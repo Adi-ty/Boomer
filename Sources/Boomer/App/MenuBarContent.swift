@@ -10,7 +10,7 @@ struct MenuBarContent: View {
         if engine.hasOnboarded {
             petMenu
         } else {
-            Text("Boomer").font(.headline)
+            Text("Boomer")
             Button("Finish setting up…") {
                 NotificationCenter.default.post(name: .boomerShowOnboarding, object: nil)
             }
@@ -19,32 +19,31 @@ struct MenuBarContent: View {
         }
     }
 
+    // MARK: - Adopted-pet menu
+
     @ViewBuilder
     private var petMenu: some View {
-        Text("\(engine.pet.name) the \(engine.pet.species == .dog ? "dog" : "cat")")
-            .font(.headline)
-        Text("Mood: \(engine.mood.description)")
+        Text("\(engine.pet.species == .dog ? "🐶" : "🐱")  \(engine.pet.name) — \(engine.mood.description)")
 
         Divider()
 
+        // Care.
         Button("Feed") { engine.feed() }
         Button("Play") { engine.play() }
         Button(engine.state == .sleeping ? "Wake up" : "Take a nap") { engine.toggleSleep() }
 
         Divider()
 
+        // Things the pet helps with.
         Button("Notes & Reminders…") {
             NotificationCenter.default.post(name: .boomerShowBoard, object: nil)
         }
-
         Button("Chat with \(engine.pet.name)…") {
             NotificationCenter.default.post(name: .boomerShowChat, object: nil)
         }
-
         Button("Summarize clipboard") {
             NotificationCenter.default.post(name: .boomerSummarizeClipboard, object: nil)
         }
-
         if focus.isActive {
             Text("Focusing — \(focus.remainingDescription)")
             Button("End focus early") { focus.cancel() }
@@ -57,84 +56,88 @@ struct MenuBarContent: View {
 
         Divider()
 
-        // Stay-out-of-the-way controls.
-        Button(engine.calmMode ? "Resume wandering" : "Stay put (calm mode)") {
-            engine.toggleCalmMode()
-        }
-        if engine.isPetHidden {
-            Button("Come back out") {
-                NotificationCenter.default.post(name: .boomerShowPet, object: nil)
-            }
-        } else {
-            Button("Hide for 30 minutes") {
-                NotificationCenter.default.post(name: .boomerHidePet, object: nil)
-            }
-        }
-
-        Divider()
-
-        Button {
-            engine.toggleSounds()
-        } label: {
-            Label("Sound effects",
-                  systemImage: engine.soundsEnabled ? "checkmark.circle.fill" : "circle")
-        }
-        Button {
-            LaunchAtLogin.toggle()
-        } label: {
-            Label("Launch at login",
-                  systemImage: LaunchAtLogin.isEnabled ? "checkmark.circle.fill" : "circle")
-        }
-
-        Divider()
-
+        // Both pets are always available — switch whenever you like.
         let other = engine.otherSpecies
-        if engine.isUnlocked(other) {
-            Button("Switch to \(engine.name(for: other))") { engine.switchTo(other) }
-        } else {
-            Button(
-                "Adopt \(other.defaultName) — care \(min(engine.carePoints, PetEngine.unlockThreshold))/\(PetEngine.unlockThreshold)"
-            ) {}
-                .disabled(true)
-        }
+        Button("Switch to \(engine.name(for: other))") { engine.switchTo(other) }
 
         Divider()
 
-        superpowers
+        settings
 
         Divider()
 
         quitButton
     }
 
+    // MARK: - Settings submenu
+
+    private var settings: some View {
+        Menu("Settings") {
+            Button {
+                engine.toggleSounds()
+            } label: {
+                Label("Sound effects",
+                      systemImage: engine.soundsEnabled ? "checkmark.circle.fill" : "circle")
+            }
+            Button {
+                LaunchAtLogin.shared.toggle()
+            } label: {
+                Label("Launch at login",
+                      systemImage: LaunchAtLogin.shared.isEnabled ? "checkmark.circle.fill" : "circle")
+            }
+            Button {
+                engine.toggleCalmMode()
+            } label: {
+                Label("Stay put (calm mode)",
+                      systemImage: engine.calmMode ? "checkmark.circle.fill" : "circle")
+            }
+
+            Divider()
+
+            if engine.isPetHidden {
+                Button("Come back out") {
+                    NotificationCenter.default.post(name: .boomerShowPet, object: nil)
+                }
+            } else {
+                Button("Hide for 30 minutes") {
+                    NotificationCenter.default.post(name: .boomerHidePet, object: nil)
+                }
+            }
+
+            Divider()
+
+            permissions
+        }
+    }
+
     /// Permission-gated features. Rows show a checkmark once granted; granting
     /// Input Monitoring may require relaunching Boomer (macOS applies it then).
-    private var superpowers: some View {
-        Menu("Superpowers") {
-            let permissions = PermissionsManager.shared
+    private var permissions: some View {
+        Menu("Permissions") {
+            let perms = PermissionsManager.shared
             Button {
-                permissions.requestAccessibility()
+                perms.requestAccessibility()
             } label: {
                 Label("Sit on Terminal when agents finish (Accessibility)",
-                      systemImage: permissions.hasAccessibility ? "checkmark.circle.fill" : "circle")
+                      systemImage: perms.hasAccessibility ? "checkmark.circle.fill" : "circle")
             }
-            .disabled(permissions.hasAccessibility)
+            .disabled(perms.hasAccessibility)
 
             Button {
-                permissions.requestInputMonitoring()
+                perms.requestInputMonitoring()
             } label: {
                 Label("Keep you company while typing (Input Monitoring)",
-                      systemImage: permissions.hasInputMonitoring ? "checkmark.circle.fill" : "circle")
+                      systemImage: perms.hasInputMonitoring ? "checkmark.circle.fill" : "circle")
             }
-            .disabled(permissions.hasInputMonitoring)
+            .disabled(perms.hasInputMonitoring)
 
             Button {
-                permissions.requestNotifications()
+                perms.requestNotifications()
             } label: {
                 Label("Deliver reminders & break alerts (Notifications)",
-                      systemImage: permissions.notificationsAuthorized ? "checkmark.circle.fill" : "circle")
+                      systemImage: perms.notificationsAuthorized ? "checkmark.circle.fill" : "circle")
             }
-            .disabled(permissions.notificationsAuthorized)
+            .disabled(perms.notificationsAuthorized)
 
             Divider()
 
